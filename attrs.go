@@ -134,7 +134,7 @@ func GetAttributes(seq *sx.Pair) (result Attributes) {
 		if !val.IsAtom() {
 			continue
 		}
-		result = result.Set(key.GoString(), val.GoString())
+		result = result.Set(GoValue(key), GoValue(val))
 	}
 	return result
 }
