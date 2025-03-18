@@ -20,7 +20,6 @@ var (
 	// Symbols for Metanodes
 	SymBlock  = sx.MakeSymbol("BLOCK")
 	SymInline = sx.MakeSymbol("INLINE")
-	SymMeta   = sx.MakeSymbol("META")
 
 	// Symbols for Zettel noMakede types.
 	SymBLOB            = sx.MakeSymbol("BLOB")
@@ -69,10 +68,10 @@ var (
 	SymVerbatimZettel  = sx.MakeSymbol("VERBATIM-ZETTEL")
 
 	// Constant symbols for reference states.
-	SymRefStateInvalid  = sx.MakeSymbol("INVALID")
-	SymRefStateSelf     = sx.MakeSymbol("SELF")
-	SymRefStateHosted   = sx.MakeSymbol("HOSTED")
-	SymRefStateExternal = sx.MakeSymbol("EXTERNAL")
+	SymRefStateExternal = sx.MakeSymbol("EXTERNAL") // e.g. https://t73f.de/links/software
+	SymRefStateHosted   = sx.MakeSymbol("HOSTED")   // e.g. ./foo ../foo /foo /foo/bar
+	SymRefStateInvalid  = sx.MakeSymbol("INVALID")  // e.g. :t73f.de/r/zsx
+	SymRefStateSelf     = sx.MakeSymbol("SELF")     // e.g. . .#ext #ext
 )
 
 // Constants for attributes and their values
