@@ -69,6 +69,9 @@ func MakeCell(attrs *sx.Pair, inlines *sx.Pair) *sx.Pair { return inlines.Cons(a
 
 // MakeTransclusion builds a transclusion node.
 func MakeTransclusion(attrs *sx.Pair, ref *sx.Pair, text *sx.Pair) *sx.Pair {
+	if text == nil {
+		return sx.MakeList(SymTransclude, attrs, ref)
+	}
 	return text.Cons(ref).Cons(attrs).Cons(SymTransclude)
 }
 
