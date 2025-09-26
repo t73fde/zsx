@@ -445,23 +445,24 @@ func walkDescriptionChildrenIt(v VisitorIt, dn *sx.Pair, env *sx.Pair) {
 
 func walkTableChildren(v Visitor, tn *sx.Pair, env *sx.Pair) *sx.Pair {
 	sym, next := tn.Car(), tn.Tail()
+	attrs := next.Head()
+	next = next.Tail()
 
-	// TODO: attrs
 	var lb sx.ListBuilder
-	lb.Add(sym)
+	lb.AddN(sym, attrs)
 	for row := range next.Pairs() {
 		lb.Add(walkChildrenList(v, row.Head(), env))
 	}
 	return lb.List()
 }
 func walkTableChildrenBang(v Visitor, tn *sx.Pair, env *sx.Pair) *sx.Pair {
-	for row := range tn.Tail().Pairs() {
+	for row := range tn.Tail().Tail().Pairs() {
 		row.SetCar(walkChildrenListBang(v, row.Head(), env))
 	}
 	return tn
 }
 func walkTableChildrenIt(v VisitorIt, tn *sx.Pair, env *sx.Pair) {
-	for row := range tn.Tail().Pairs() {
+	for row := range tn.Tail().Tail().Pairs() {
 		WalkItList(v, row.Head(), 0, env)
 	}
 }
