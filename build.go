@@ -100,9 +100,30 @@ func MakeLink(attrs *sx.Pair, ref *sx.Pair, text *sx.Pair) *sx.Pair {
 	return text.Cons(ref).Cons(attrs).Cons(SymLink)
 }
 
+// GetLink returns the elements of a link node.
+func GetLink(node *sx.Pair) (*sx.Pair, *sx.Pair, *sx.Pair) {
+	attrs := node.Tail()
+	ref := attrs.Tail()
+	inlines := ref.Tail()
+	return attrs.Head(), ref.Head(), inlines
+}
+
 // MakeEmbed builds a embed node.
 func MakeEmbed(attrs *sx.Pair, ref sx.Object, syntax string, text *sx.Pair) *sx.Pair {
 	return text.Cons(sx.MakeString(syntax)).Cons(ref).Cons(attrs).Cons(SymEmbed)
+}
+
+// GetEmbed returns the elements of an embed node.
+func GetEmbed(node *sx.Pair) (*sx.Pair, *sx.Pair, string, *sx.Pair) {
+	attrs := node.Tail()
+	ref := attrs.Tail()
+	syntax := ref.Tail()
+	inlines := syntax.Tail()
+	syntaxVal, isString := sx.GetString(syntax.Car())
+	if !isString {
+		syntaxVal = sx.MakeString("")
+	}
+	return attrs.Head(), ref.Head(), syntaxVal.GetValue(), inlines
 }
 
 // MakeEmbedBLOB builds an embedded inline BLOB node.
@@ -130,7 +151,38 @@ func MakeFormat(sym *sx.Symbol, attrs, inlines *sx.Pair) *sx.Pair {
 	return inlines.Cons(attrs).Cons(sym)
 }
 
+// GetFormat returns the elements of a formatting node.
+func GetFormat(node *sx.Pair) (*sx.Symbol, *sx.Pair, *sx.Pair) {
+	if sym, isSymbol := sx.GetSymbol(node.Car()); isSymbol {
+		attrs := node.Tail()
+		inlines := attrs.Tail()
+		return sym, attrs.Head(), inlines
+	}
+	return nil, nil, nil
+}
+
 // MakeLiteral builds a inline node with literal text.
 func MakeLiteral(sym *sx.Symbol, attrs *sx.Pair, text string) *sx.Pair {
 	return sx.Cons(sym, sx.Cons(attrs, sx.Cons(sx.MakeString(text), sx.Nil())))
+}
+
+// MakeReference builds a reference node.
+func MakeReference(sym *sx.Symbol, val string) *sx.Pair {
+	return sx.Cons(sym, sx.Cons(sx.MakeString(val), sx.Nil()))
+}
+
+// GetReference returns the reference symbol and value.
+func GetReference(ref *sx.Pair) (*sx.Symbol, string) {
+	if ref != nil {
+		if sym, isSymbol := sx.GetSymbol(ref.Car()); isSymbol {
+			val, isString := sx.GetString(ref.Cdr())
+			if !isString {
+				val, isString = sx.GetString(ref.Tail().Car())
+			}
+			if isString {
+				return sym, val.GetValue()
+			}
+		}
+	}
+	return nil, ""
 }
