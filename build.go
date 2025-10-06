@@ -44,9 +44,31 @@ func MakeVerbatim(sym *sx.Symbol, attrs *sx.Pair, content string) *sx.Pair {
 	return sx.MakeList(sym, attrs, sx.MakeString(content))
 }
 
+// GetVerbatim returns the elements of a verbatim node.
+func GetVerbatim(node *sx.Pair) (*sx.Symbol, *sx.Pair, string) {
+	if sym, isSymbol := sx.GetSymbol(node.Car()); isSymbol {
+		attrsNode := node.Tail()
+		if s, isString := sx.GetString(attrsNode.Tail().Car()); isString {
+			return sym, attrsNode.Head(), s.GetValue()
+		}
+	}
+	return nil, nil, ""
+}
+
 // MakeRegion builds a region node.
 func MakeRegion(sym *sx.Symbol, attrs *sx.Pair, blocks *sx.Pair, inlines *sx.Pair) *sx.Pair {
 	return inlines.Cons(blocks).Cons(attrs).Cons(sym)
+}
+
+// GetRegion returns the elements of a region node.
+func GetRegion(node *sx.Pair) (*sx.Symbol, *sx.Pair, *sx.Pair, *sx.Pair) {
+	if sym, isSymbol := sx.GetSymbol(node.Car()); isSymbol {
+		attrsNode := node.Tail()
+		blocksNode := attrsNode.Tail()
+		inlines := blocksNode.Tail()
+		return sym, attrsNode.Head(), blocksNode.Head(), inlines
+	}
+	return nil, nil, nil, nil
 }
 
 // MakeHeading builds a heading node.
@@ -59,9 +81,41 @@ func MakeHeading(level int, attrs, text *sx.Pair, slug, fragment string) *sx.Pai
 		Cons(SymHeading)
 }
 
+// GetHeading returns the elements of a heading node.
+func GetHeading(node *sx.Pair) (int, *sx.Pair, *sx.Pair, string, string) {
+	levelNode := node.Tail()
+	if levelNum, isNum := sx.GetNumber(levelNode.Car()); isNum {
+		if level, isInt := levelNum.(sx.Int64); isInt {
+			attrsNode := levelNode.Tail()
+			slugNode := attrsNode.Tail()
+			if slug, isSlug := sx.GetString(slugNode.Car()); isSlug {
+				fragmentNode := slugNode.Tail()
+				if fragment, isFragment := sx.GetString(fragmentNode.Car()); isFragment {
+					inlines := fragmentNode.Tail()
+					return int(level), attrsNode.Head(), inlines, slug.GetValue(), fragment.GetValue()
+				}
+			}
+		}
+	}
+	return 0, nil, nil, "", ""
+}
+
 // MakeThematic builds a node to implement a thematic break.
 func MakeThematic(attrs *sx.Pair) *sx.Pair {
 	return sx.Cons(SymThematic, sx.Cons(attrs, sx.Nil()))
+}
+
+// GetThematic returns the elements of a thematic break node.
+func GetThematic(node *sx.Pair) *sx.Pair { return node.Tail().Head() }
+
+// GetList returns the elements of a list node.
+func GetList(node *sx.Pair) (*sx.Symbol, *sx.Pair, *sx.Pair) {
+	if sym, isSymbol := sx.GetSymbol(node.Car()); isSymbol {
+		attrsNode := node.Tail()
+		blocks := attrsNode.Tail()
+		return sym, attrsNode.Head(), blocks
+	}
+	return nil, nil, nil
 }
 
 // MakeCell builds a table cell node.
@@ -154,9 +208,9 @@ func MakeFormat(sym *sx.Symbol, attrs, inlines *sx.Pair) *sx.Pair {
 // GetFormat returns the elements of a formatting node.
 func GetFormat(node *sx.Pair) (*sx.Symbol, *sx.Pair, *sx.Pair) {
 	if sym, isSymbol := sx.GetSymbol(node.Car()); isSymbol {
-		attrs := node.Tail()
-		inlines := attrs.Tail()
-		return sym, attrs.Head(), inlines
+		attrsNode := node.Tail()
+		inlines := attrsNode.Tail()
+		return sym, attrsNode.Head(), inlines
 	}
 	return nil, nil, nil
 }
@@ -164,6 +218,17 @@ func GetFormat(node *sx.Pair) (*sx.Symbol, *sx.Pair, *sx.Pair) {
 // MakeLiteral builds a inline node with literal text.
 func MakeLiteral(sym *sx.Symbol, attrs *sx.Pair, text string) *sx.Pair {
 	return sx.Cons(sym, sx.Cons(attrs, sx.Cons(sx.MakeString(text), sx.Nil())))
+}
+
+// GetLiteral returns the elements of a literal node.
+func GetLiteral(node *sx.Pair) (*sx.Symbol, *sx.Pair, string) {
+	if sym, isSymbol := sx.GetSymbol(node.Car()); isSymbol {
+		attrsNode := node.Tail()
+		if s, isString := sx.GetString(attrsNode.Tail().Car()); isString {
+			return sym, attrsNode.Head(), s.GetValue()
+		}
+	}
+	return nil, nil, ""
 }
 
 // MakeReference builds a reference node.
