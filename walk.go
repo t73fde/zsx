@@ -13,7 +13,9 @@
 
 package zsx
 
-import "t73f.de/r/sx"
+import (
+	"t73f.de/r/sx"
+)
 
 // Visitor is walking the sx-based AST.
 //
@@ -487,16 +489,9 @@ func walkCellChildrenBang(v Visitor, cn *sx.Pair, alst *sx.Pair) *sx.Pair {
 }
 
 func walkBLOBChildren(v Visitor, bn *sx.Pair, alst *sx.Pair) *sx.Pair {
-	sym, next := bn.Car(), bn.Tail()
-	attrs := next.Car()
-	next = next.Tail()
-	inlines := next.Head()
-	next = next.Tail()
-	s1 := next.Car()
-	s2 := next.Tail().Car()
-
+	attrs, inlines, syntax, content := GetBLOB(bn)
 	if newInlines := walkChildrenList(v, inlines, alst); newInlines != inlines {
-		return sx.MakeList(sym, attrs, newInlines, s1, s2)
+		return MakeBLOB(attrs, newInlines, syntax, content)
 	}
 	return bn
 }
@@ -505,17 +500,15 @@ func walkBLOBChildrenBang(v Visitor, bn *sx.Pair, alst *sx.Pair) *sx.Pair {
 	next := bn.Tail()
 	// attrs := next.Car()
 	next = next.Tail()
-	// description := next.Car()
-	next.SetCar(walkChildrenListBang(v, next.Head(), alst))
+	// syntax := next.Car()
+	next = next.Tail()
+	// content := next.Car()
+	next.SetCdr(walkChildrenListBang(v, next.Tail(), alst))
 	return bn
 }
 func walkBLOBChildrenIt(v VisitorIt, bn *sx.Pair, alst *sx.Pair) {
-	// sym := bn.Car()
-	next := bn.Tail()
-	// attrs := next.Car()
-	next = next.Tail()
-	// description := next.Car()
-	WalkItList(v, next.Head(), 0, alst)
+	_, inlines, _, _ := GetBLOB(bn)
+	WalkItList(v, inlines, 0, alst)
 }
 
 func walkMarkChildren(v Visitor, mn *sx.Pair, alst *sx.Pair) *sx.Pair {

@@ -170,22 +170,18 @@ func GetTransclusion(node *sx.Pair) (*sx.Pair, *sx.Pair, *sx.Pair) {
 
 // MakeBLOB builds a block BLOB node.
 func MakeBLOB(attrs, description *sx.Pair, syntax, content string) *sx.Pair {
-	return sx.Cons(SymBLOB,
-		sx.Cons(attrs,
-			sx.Cons(description,
-				sx.Cons(sx.MakeString(syntax),
-					sx.Cons(sx.MakeString(content), sx.Nil())))))
+	return description.Cons(sx.MakeString(content)).Cons(sx.MakeString(syntax)).Cons(attrs).Cons(SymBLOB)
 }
 
 // GetBLOB returns all elements of a block BLOB node.
 func GetBLOB(node *sx.Pair) (*sx.Pair, *sx.Pair, string, string) {
 	attrsNode := node.Tail()
-	descrNode := attrsNode.Tail()
-	syntaxNode := descrNode.Tail()
+	syntaxNode := attrsNode.Tail()
 	if syntax, isSyntax := sx.GetString(syntaxNode.Car()); isSyntax {
 		contentNode := syntaxNode.Tail()
 		if content, isContent := sx.GetString(contentNode.Car()); isContent {
-			return attrsNode.Head(), descrNode.Head(), syntax.GetValue(), content.GetValue()
+			description := contentNode.Tail()
+			return attrsNode.Head(), description, syntax.GetValue(), content.GetValue()
 		}
 	}
 	return nil, nil, "", ""
