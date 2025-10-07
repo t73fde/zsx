@@ -13,7 +13,11 @@
 
 package zsx
 
-import "t73f.de/r/sx"
+import (
+	"encoding/base64"
+
+	"t73f.de/r/sx"
+)
 
 // MakeBlock builds a block node.
 func MakeBlock(blocks ...*sx.Pair) *sx.Pair {
@@ -169,22 +173,48 @@ func GetTransclusion(node *sx.Pair) (*sx.Pair, *sx.Pair, *sx.Pair) {
 }
 
 // MakeBLOB builds a block BLOB node.
-func MakeBLOB(attrs, description *sx.Pair, syntax, content string) *sx.Pair {
-	return description.Cons(sx.MakeString(content)).Cons(sx.MakeString(syntax)).Cons(attrs).Cons(SymBLOB)
+func MakeBLOB(attrs *sx.Pair, syntax string, data []byte, description *sx.Pair) *sx.Pair {
+	return description.
+		Cons(sx.MakeString(encodeBinary(syntax, data))).
+		Cons(sx.MakeString(syntax)).
+		Cons(attrs).
+		Cons(SymBLOB)
 }
 
 // GetBLOB returns all elements of a block BLOB node.
-func GetBLOB(node *sx.Pair) (*sx.Pair, *sx.Pair, string, string) {
+func GetBLOB(node *sx.Pair) (*sx.Pair, string, []byte, *sx.Pair) {
 	attrsNode := node.Tail()
 	syntaxNode := attrsNode.Tail()
 	if syntax, isSyntax := sx.GetString(syntaxNode.Car()); isSyntax {
 		contentNode := syntaxNode.Tail()
 		if content, isContent := sx.GetString(contentNode.Car()); isContent {
+			syn := syntax.GetValue()
+			data := decodeBinary(syn, content.GetValue())
 			description := contentNode.Tail()
-			return attrsNode.Head(), description, syntax.GetValue(), content.GetValue()
+			return attrsNode.Head(), syn, data, description
 		}
 	}
-	return nil, nil, "", ""
+	return nil, "", nil, nil
+}
+
+// MakeBLOBuncode builds a block BLOB node, but assumes already encoded data.
+func MakeBLOBuncode(attrs *sx.Pair, syntax string, data string, description *sx.Pair) *sx.Pair {
+	return description.Cons(sx.MakeString(data)).Cons(sx.MakeString(syntax)).Cons(attrs).Cons(SymBLOB)
+}
+
+// GetBLOBuncode returns all elements of a block BLOB node and does not decode
+// the BLOB data.
+func GetBLOBuncode(node *sx.Pair) (*sx.Pair, string, string, *sx.Pair) {
+	attrsNode := node.Tail()
+	syntaxNode := attrsNode.Tail()
+	if syntax, isSyntax := sx.GetString(syntaxNode.Car()); isSyntax {
+		contentNode := syntaxNode.Tail()
+		if data, isData := sx.GetString(contentNode.Car()); isData {
+			description := contentNode.Tail()
+			return attrsNode.Head(), syntax.GetValue(), data.GetValue(), description
+		}
+	}
+	return nil, "", "", nil
 }
 
 // MakeText builds a text node.
@@ -238,12 +268,39 @@ func GetEmbed(node *sx.Pair) (*sx.Pair, *sx.Pair, string, *sx.Pair) {
 }
 
 // MakeEmbedBLOB builds an embedded inline BLOB node.
-func MakeEmbedBLOB(attrs *sx.Pair, syntax string, content string, inlines *sx.Pair) *sx.Pair {
-	return inlines.Cons(sx.MakeString(content)).Cons(sx.MakeString(syntax)).Cons(attrs).Cons(SymEmbedBLOB)
+func MakeEmbedBLOB(attrs *sx.Pair, syntax string, data []byte, inlines *sx.Pair) *sx.Pair {
+	return inlines.
+		Cons(sx.MakeString(encodeBinary(syntax, data))).
+		Cons(sx.MakeString(syntax)).
+		Cons(attrs).
+		Cons(SymEmbedBLOB)
 }
 
 // GetEmbedBLOB returns all elements of an inline BLOB node.
-func GetEmbedBLOB(node *sx.Pair) (*sx.Pair, string, string, *sx.Pair) {
+func GetEmbedBLOB(node *sx.Pair) (*sx.Pair, string, []byte, *sx.Pair) {
+	attrsNode := node.Tail()
+	syntaxNode := attrsNode.Tail()
+	if syntax, isSyntax := sx.GetString(syntaxNode.Car()); isSyntax {
+		contentNode := syntaxNode.Tail()
+		if content, isContent := sx.GetString(contentNode.Car()); isContent {
+			syn := syntax.GetValue()
+			data := decodeBinary(syn, content.GetValue())
+			inlines := contentNode.Tail()
+			return attrsNode.Head(), syn, data, inlines
+		}
+	}
+	return nil, "", nil, nil
+}
+
+// MakeEmbedBLOBuncode builds an embedded inline BLOB node, and does not
+// encode binary content data.
+func MakeEmbedBLOBuncode(attrs *sx.Pair, syntax string, data string, inlines *sx.Pair) *sx.Pair {
+	return inlines.Cons(sx.MakeString(data)).Cons(sx.MakeString(syntax)).Cons(attrs).Cons(SymEmbedBLOB)
+}
+
+// GetEmbedBLOBuncode returns all elements of an inline BLOB node. It does not
+// decode the content data.
+func GetEmbedBLOBuncode(node *sx.Pair) (*sx.Pair, string, string, *sx.Pair) {
 	attrsNode := node.Tail()
 	syntaxNode := attrsNode.Tail()
 	if syntax, isSyntax := sx.GetString(syntaxNode.Car()); isSyntax {
@@ -355,4 +412,20 @@ func GetReference(ref *sx.Pair) (*sx.Symbol, string) {
 		}
 	}
 	return nil, ""
+}
+
+func encodeBinary(syntax string, data []byte) string {
+	if syntax == SyntaxSVG {
+		return string(data)
+	}
+	return base64.StdEncoding.EncodeToString(data)
+}
+func decodeBinary(syntax, content string) []byte {
+	if syntax == SyntaxSVG {
+		return []byte(content)
+	}
+	if data, err := base64.StdEncoding.DecodeString(content); err == nil {
+		return data
+	}
+	return nil
 }

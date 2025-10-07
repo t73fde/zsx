@@ -81,3 +81,10 @@ var (
 	AttrAlignLeft   = sx.MakeString("left")
 	AttrAlignRight  = sx.MakeString("right")
 )
+
+// Some additional constants.
+const (
+	// SyntaxSVG specifies the special syntax "svg", because a BLOB node
+	// with this syntax will *not* encode its data.
+	SyntaxSVG = "svg"
+)

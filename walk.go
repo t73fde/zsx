@@ -36,7 +36,7 @@ type Visitor interface {
 	VisitAfter(node *sx.Pair, alst *sx.Pair) sx.Object
 }
 
-// Walk a sx-based AST through a Visitor which does not modify the AST.
+// Walk a sx-based AST through a Visitor.
 func Walk(v Visitor, node *sx.Pair, alst *sx.Pair) sx.Object {
 	if node == nil {
 		return node
@@ -47,23 +47,6 @@ func Walk(v Visitor, node *sx.Pair, alst *sx.Pair) sx.Object {
 
 	if sym, isSymbol := sx.GetSymbol(node.Car()); isSymbol {
 		if fn, found := walkChildren[sym]; found {
-			node = fn(v, node, alst)
-		}
-	}
-	return v.VisitAfter(node, alst)
-}
-
-// WalkBang a sx-based AST through a Visitor which may modify the AST in place.
-func WalkBang(v Visitor, node *sx.Pair, alst *sx.Pair) sx.Object {
-	if node == nil {
-		return node
-	}
-	if result, ok := v.VisitBefore(node, alst); ok {
-		return result
-	}
-
-	if sym, isSymbol := sx.GetSymbol(node.Car()); isSymbol {
-		if fn, found := walkChildrenBang[sym]; found {
 			node = fn(v, node, alst)
 		}
 	}
@@ -121,7 +104,7 @@ var symWalkPos = sx.MakeSymbol("walk-pos")
 type walkChildrenMap map[*sx.Symbol]func(Visitor, *sx.Pair, *sx.Pair) *sx.Pair
 type walkChildrenItMap map[*sx.Symbol]func(VisitorIt, *sx.Pair, *sx.Pair)
 
-var walkChildren, walkChildrenBang walkChildrenMap
+var walkChildren walkChildrenMap
 var walkChildrenIt walkChildrenItMap
 
 func init() {
@@ -156,38 +139,6 @@ func init() {
 		SymFormatSpan:   walkChildrenInlines2,
 		SymFormatSub:    walkChildrenInlines2,
 		SymFormatSuper:  walkChildrenInlines2,
-	}
-	walkChildrenBang = walkChildrenMap{
-		SymBlock:         walkChildrenTailBang,
-		SymPara:          walkChildrenTailBang,
-		SymRegionBlock:   walkChildrenRegionBang,
-		SymRegionQuote:   walkChildrenRegionBang,
-		SymRegionVerse:   walkChildrenRegionBang,
-		SymHeading:       walkHeadingChildrenBang,
-		SymListOrdered:   walkListChildrenBang,
-		SymListUnordered: walkListChildrenBang,
-		SymListQuote:     walkListChildrenBang,
-		SymDescription:   walkDescriptionChildrenBang,
-		SymTable:         walkTableChildrenBang,
-		SymCell:          walkCellChildrenBang,
-		SymTransclude:    walkChildrenInlines3Bang,
-		SymBLOB:          walkBLOBChildrenBang,
-
-		SymInline:       walkChildrenTailBang,
-		SymEndnote:      walkChildrenInlines2Bang,
-		SymMark:         walkMarkChildrenBang,
-		SymLink:         walkChildrenInlines3Bang,
-		SymEmbed:        walkEmbedChildrenBang,
-		SymCite:         walkChildrenInlines3Bang,
-		SymFormatDelete: walkChildrenInlines2Bang,
-		SymFormatEmph:   walkChildrenInlines2Bang,
-		SymFormatInsert: walkChildrenInlines2Bang,
-		SymFormatMark:   walkChildrenInlines2Bang,
-		SymFormatQuote:  walkChildrenInlines2Bang,
-		SymFormatStrong: walkChildrenInlines2Bang,
-		SymFormatSpan:   walkChildrenInlines2Bang,
-		SymFormatSub:    walkChildrenInlines2Bang,
-		SymFormatSuper:  walkChildrenInlines2Bang,
 	}
 	walkChildrenIt = walkChildrenItMap{
 		SymBlock:         walkListIt1,
@@ -237,34 +188,6 @@ func walkChildrenTail(v Visitor, node *sx.Pair, alst *sx.Pair) *sx.Pair {
 	}
 	return lb.List()
 }
-func walkChildrenTailBang(v Visitor, node *sx.Pair, alst *sx.Pair) *sx.Pair {
-	hasNil := false
-	pos, pair := 0, sx.Cons(symWalkPos, sx.Int64(0))
-	for n := range node.Tail().Pairs() {
-		obj := WalkBang(v, n.Head(), alst.Cons(pair))
-		pos++
-		pair.SetCdr(sx.Int64(pos))
-		if sx.IsNil(obj) {
-			hasNil = true
-		}
-		n.SetCar(obj)
-	}
-	if !hasNil {
-		return node
-	}
-	for n := node; ; {
-		next := n.Tail()
-		if next == nil {
-			break
-		}
-		if sx.IsNil(next.Car()) {
-			n.SetCdr(next.Cdr())
-			continue
-		}
-		n = next
-	}
-	return node
-}
 
 func walkChildrenList(v Visitor, lst *sx.Pair, alst *sx.Pair) *sx.Pair {
 	var lb sx.ListBuilder
@@ -278,29 +201,6 @@ func walkChildrenList(v Visitor, lst *sx.Pair, alst *sx.Pair) *sx.Pair {
 		}
 	}
 	return lb.List()
-}
-func walkChildrenListBang(v Visitor, lst *sx.Pair, alst *sx.Pair) *sx.Pair {
-	hasNil := false
-	pos, pair := 0, sx.Cons(symWalkPos, sx.Int64(0))
-	for n := range lst.Pairs() {
-		obj := WalkBang(v, n.Head(), alst.Cons(pair))
-		pos++
-		pair.SetCdr(sx.Int64(pos))
-		if sx.IsNil(obj) {
-			hasNil = true
-		}
-		n.SetCar(obj)
-	}
-	if !hasNil {
-		return lst
-	}
-	var result sx.ListBuilder
-	for obj := range lst.Values() {
-		if !sx.IsNil(obj) {
-			result.Add(obj)
-		}
-	}
-	return result.List()
 }
 
 // WalkItList will WalkIt for all elements of the list, after skipping the first elements.
@@ -322,89 +222,27 @@ func walkListIt4(v VisitorIt, node *sx.Pair, alst *sx.Pair) { WalkItList(v, node
 func walkListIt5(v VisitorIt, node *sx.Pair, alst *sx.Pair) { WalkItList(v, node, 5, alst) }
 
 func walkChildrenRegion(v Visitor, node *sx.Pair, alst *sx.Pair) *sx.Pair {
-	sym, next := node.Car(), node.Tail()
-	attrs := next.Car()
-	next = next.Tail()
-	blocks := next.Head()
+	sym, attrs, blocks, inlines := GetRegion(node)
 	newBlocks := walkChildrenList(v, blocks, alst)
-	inlines := next.Tail()
 	newInlines := walkChildrenList(v, inlines, alst)
-	if blocks != newBlocks || inlines != newInlines {
-		var lb sx.ListBuilder
-		lb.AddN(sym, attrs, newBlocks)
-		lb.ExtendBang(newInlines)
-		return lb.List()
-	}
-	return node
-}
-func walkChildrenRegionBang(v Visitor, node *sx.Pair, alst *sx.Pair) *sx.Pair {
-	// sym := node.Car()
-	next := node.Tail()
-	// attrs := next.Car()
-	next = next.Tail()
-	next.SetCar(walkChildrenListBang(v, next.Head(), alst))
-	next.SetCdr(walkChildrenListBang(v, next.Tail(), alst))
-	return node
+	return MakeRegion(sym, attrs, newBlocks, newInlines)
 }
 func walkChildrenRegionIt(v VisitorIt, node *sx.Pair, alst *sx.Pair) {
-	// sym := node.Car()
-	next := node.Tail()
-	// attrs := next.Car()
-	next = next.Tail()
-	WalkItList(v, next.Head(), 0, alst)
-	WalkItList(v, next.Tail(), 0, alst)
+	_, _, blocks, inlines := GetRegion(node)
+	WalkItList(v, blocks, 0, alst)
+	WalkItList(v, inlines, 0, alst)
 }
 
 func walkHeadingChildren(v Visitor, node *sx.Pair, alst *sx.Pair) *sx.Pair {
-	sym, next := node.Car(), node.Tail()
-	level := next.Car()
-	next = next.Tail()
-	attrs := next.Car()
-	next = next.Tail()
-	slug := next.Car()
-	next = next.Tail()
-	fragment := next.Car()
-	inlines := next.Tail()
-	if newInlines := walkChildrenList(v, inlines, alst); inlines != newInlines {
-		var lb sx.ListBuilder
-		lb.AddN(sym, level, attrs, slug, fragment)
-		lb.ExtendBang(newInlines)
-		return lb.List()
-	}
-	return node
-}
-func walkHeadingChildrenBang(v Visitor, node *sx.Pair, alst *sx.Pair) *sx.Pair {
-	// sym := node.Car()
-	next := node.Tail()
-	// level := next.Car()
-	next = next.Tail()
-	// attrs := next.Car()
-	next = next.Tail()
-	// slug := next.Car()
-	next = next.Tail()
-	// fragment := next.Car()
-	next.SetCdr(walkChildrenListBang(v, next.Tail(), alst))
-	return node
+	level, attrs, inlines, slug, fragment := GetHeading(node)
+	newInlines := walkChildrenList(v, inlines, alst)
+	return MakeHeading(level, attrs, newInlines, slug, fragment)
 }
 
 func walkListChildren(v Visitor, node *sx.Pair, alst *sx.Pair) *sx.Pair {
-	sym, next := node.Car(), node.Tail()
-	attrs := next.Car()
-	items := next.Tail()
-	if newItems := walkChildrenList(v, items, alst); items != newItems {
-		var lb sx.ListBuilder
-		lb.AddN(sym, attrs)
-		lb.ExtendBang(newItems)
-		return lb.List()
-	}
-	return node
-}
-func walkListChildrenBang(v Visitor, node *sx.Pair, alst *sx.Pair) *sx.Pair {
-	// sym := node.Car()
-	next := node.Tail()
-	// attrs := next.Car()
-	next.SetCdr(walkChildrenListBang(v, next.Tail(), alst))
-	return node
+	sym, attrs, items := GetList(node)
+	newItems := walkChildrenList(v, items, alst)
+	return MakeList(sym, attrs, newItems)
 }
 
 func walkDescriptionChildren(v Visitor, dn *sx.Pair, alst *sx.Pair) *sx.Pair {
@@ -422,17 +260,6 @@ func walkDescriptionChildren(v Visitor, dn *sx.Pair, alst *sx.Pair) *sx.Pair {
 		lb.Add(Walk(v, n.Head(), alst)) // Values
 	}
 	return lb.List()
-}
-func walkDescriptionChildrenBang(v Visitor, dn *sx.Pair, alst *sx.Pair) *sx.Pair {
-	for n := dn.Tail().Tail(); n != nil; n = n.Tail() {
-		n.SetCar(walkChildrenListBang(v, n.Head(), alst))
-		n = n.Tail()
-		if n == nil {
-			break
-		}
-		n.SetCar(WalkBang(v, n.Head(), alst))
-	}
-	return dn
 }
 func walkDescriptionChildrenIt(v VisitorIt, dn *sx.Pair, alst *sx.Pair) {
 	for n := dn.Tail().Tail(); n != nil; n = n.Tail() {
@@ -457,12 +284,6 @@ func walkTableChildren(v Visitor, tn *sx.Pair, alst *sx.Pair) *sx.Pair {
 	}
 	return lb.List()
 }
-func walkTableChildrenBang(v Visitor, tn *sx.Pair, alst *sx.Pair) *sx.Pair {
-	for row := range tn.Tail().Tail().Pairs() {
-		row.SetCar(walkChildrenListBang(v, row.Head(), alst))
-	}
-	return tn
-}
 func walkTableChildrenIt(v VisitorIt, tn *sx.Pair, alst *sx.Pair) {
 	for row := range tn.Tail().Tail().Pairs() {
 		WalkItList(v, row.Head(), 0, alst)
@@ -470,104 +291,31 @@ func walkTableChildrenIt(v VisitorIt, tn *sx.Pair, alst *sx.Pair) {
 }
 
 func walkCellChildren(v Visitor, cn *sx.Pair, alst *sx.Pair) *sx.Pair {
-	sym, next := cn.Car(), cn.Tail()
-	attrs, inlines := next.Head(), next.Tail()
-	if newInlines := walkChildrenList(v, inlines, alst); inlines != newInlines {
-		var lb sx.ListBuilder
-		lb.AddN(sym, attrs)
-		lb.ExtendBang(newInlines)
-		return lb.List()
-	}
-	return cn
-}
-func walkCellChildrenBang(v Visitor, cn *sx.Pair, alst *sx.Pair) *sx.Pair {
-	// sym := cn.Car()
-	next := cn.Tail()
-	// attrs := next.Head()
-	next.SetCdr(walkChildrenListBang(v, next.Tail(), alst))
-	return cn
+	attrs, inlines := GetCell(cn)
+	newInlines := walkChildrenList(v, inlines, alst)
+	return MakeCell(attrs, newInlines)
 }
 
 func walkBLOBChildren(v Visitor, bn *sx.Pair, alst *sx.Pair) *sx.Pair {
-	attrs, inlines, syntax, content := GetBLOB(bn)
-	if newInlines := walkChildrenList(v, inlines, alst); newInlines != inlines {
-		return MakeBLOB(attrs, newInlines, syntax, content)
-	}
-	return bn
-}
-func walkBLOBChildrenBang(v Visitor, bn *sx.Pair, alst *sx.Pair) *sx.Pair {
-	// sym := bn.Car()
-	next := bn.Tail()
-	// attrs := next.Car()
-	next = next.Tail()
-	// syntax := next.Car()
-	next = next.Tail()
-	// content := next.Car()
-	next.SetCdr(walkChildrenListBang(v, next.Tail(), alst))
-	return bn
+	attrs, syntax, content, inlines := GetBLOBuncode(bn)
+	newInlines := walkChildrenList(v, inlines, alst)
+	return MakeBLOBuncode(attrs, syntax, content, newInlines)
 }
 func walkBLOBChildrenIt(v VisitorIt, bn *sx.Pair, alst *sx.Pair) {
-	_, inlines, _, _ := GetBLOB(bn)
+	_, _, _, inlines := GetBLOBuncode(bn)
 	WalkItList(v, inlines, 0, alst)
 }
 
 func walkMarkChildren(v Visitor, mn *sx.Pair, alst *sx.Pair) *sx.Pair {
-	sym, next := mn.Car(), mn.Tail()
-	mark := next.Car()
-	next = next.Tail()
-	slug := next.Car()
-	next = next.Tail()
-	fragment := next.Car()
-	inlines := next.Tail()
-	if newInlines := walkChildrenList(v, inlines, alst); newInlines != inlines {
-		var lb sx.ListBuilder
-		lb.AddN(sym, mark, slug, fragment)
-		lb.ExtendBang(newInlines)
-		return lb.List()
-	}
-	return mn
-}
-func walkMarkChildrenBang(v Visitor, mn *sx.Pair, alst *sx.Pair) *sx.Pair {
-	// sym := mn.Car()
-	next := mn.Tail()
-	// mark := next.Car()
-	next = next.Tail()
-	// slug := next.Car()
-	next = next.Tail()
-	// fragment := next.Car()
-	next.SetCdr(walkChildrenListBang(v, next.Tail(), alst))
-	return mn
+	mark, slug, fragment, inlines := GetMark(mn)
+	newInlines := walkChildrenList(v, inlines, alst)
+	return MakeMark(mark, slug, fragment, newInlines)
 }
 
 func walkEmbedChildren(v Visitor, en *sx.Pair, alst *sx.Pair) *sx.Pair {
-	sym, next := en.Car(), en.Tail()
-	attr := next.Car()
-	next = next.Tail()
-	ref := next.Car()
-	next = next.Tail()
-	syntax := next.Car()
-
-	inlines := next.Tail()
-	if newInlines := walkChildrenList(v, inlines, alst); newInlines != inlines {
-		var lb sx.ListBuilder
-		lb.AddN(sym, attr, ref, syntax)
-		lb.ExtendBang(newInlines)
-		return lb.List()
-	}
-	return en
-}
-func walkEmbedChildrenBang(v Visitor, en *sx.Pair, alst *sx.Pair) *sx.Pair {
-	// sym := en.Car()
-	next := en.Tail()
-	// attr := next.Car()
-	next = next.Tail()
-	// ref := next.Car()
-	next = next.Tail()
-	// syntax := next.Car()
-
-	// text-list := next.Tail()
-	next.SetCdr(walkChildrenListBang(v, next.Tail(), alst))
-	return en
+	attrs, ref, syntax, inlines := GetEmbed(en)
+	newInlines := walkChildrenList(v, inlines, alst)
+	return MakeEmbed(attrs, ref, syntax, newInlines)
 }
 
 func walkChildrenInlines3(v Visitor, node *sx.Pair, alst *sx.Pair) *sx.Pair {
@@ -576,40 +324,20 @@ func walkChildrenInlines3(v Visitor, node *sx.Pair, alst *sx.Pair) *sx.Pair {
 	next = next.Tail()
 	val3 := next.Car()
 	elems := next.Tail()
-	if newElems := walkChildrenList(v, elems, alst); newElems != elems {
-		var lb sx.ListBuilder
-		lb.AddN(sym, attrs, val3)
-		lb.ExtendBang(newElems)
-		return lb.List()
-	}
-	return node
-}
-func walkChildrenInlines3Bang(v Visitor, ln *sx.Pair, alst *sx.Pair) *sx.Pair {
-	// sym := ln.Car()
-	next := ln.Tail()
-	// attrs := next.Car()
-	next = next.Tail()
-	// val3 := next.Car()
-	next.SetCdr(walkChildrenListBang(v, next.Tail(), alst))
-	return ln
+	newElems := walkChildrenList(v, elems, alst)
+	var lb sx.ListBuilder
+	lb.AddN(sym, attrs, val3)
+	lb.ExtendBang(newElems)
+	return lb.List()
 }
 
 func walkChildrenInlines2(v Visitor, node *sx.Pair, alst *sx.Pair) *sx.Pair {
 	sym, next := node.Car(), node.Tail()
 	attrs := next.Car()
 	elems := next.Tail()
-	if newElems := walkChildrenList(v, elems, alst); newElems != elems {
-		var lb sx.ListBuilder
-		lb.AddN(sym, attrs)
-		lb.ExtendBang(newElems)
-		return lb.List()
-	}
-	return node
-}
-func walkChildrenInlines2Bang(v Visitor, node *sx.Pair, alst *sx.Pair) *sx.Pair {
-	// sym := node.Car()
-	next := node.Tail() // Attrs
-	// attrs := next.Car()
-	next.SetCdr(walkChildrenListBang(v, next.Tail(), alst))
-	return node
+	newElems := walkChildrenList(v, elems, alst)
+	var lb sx.ListBuilder
+	lb.AddN(sym, attrs)
+	lb.ExtendBang(newElems)
+	return lb.List()
 }
