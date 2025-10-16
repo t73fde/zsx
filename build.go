@@ -41,6 +41,16 @@ func MakeInlineList(inlines *sx.Pair) *sx.Pair { return inlines.Cons(SymInline) 
 // GetInline returns all elements of an inline node.
 func GetInline(node *sx.Pair) *sx.Pair { return node.Tail() }
 
+// MakePara builds a paragraph node.
+func MakePara(inlines ...*sx.Pair) *sx.Pair {
+	var lb sx.ListBuilder
+	lb.Add(SymPara)
+	for _, inline := range inlines {
+		lb.Add(inline)
+	}
+	return lb.List()
+}
+
 // MakeParaList builds a paragraph node.
 func MakeParaList(inlines *sx.Pair) *sx.Pair { return inlines.Cons(SymPara) }
 
