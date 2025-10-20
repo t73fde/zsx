@@ -35,6 +35,16 @@ func MakeBlockList(blocks *sx.Pair) *sx.Pair { return blocks.Cons(SymBlock) }
 // GetBlock returns all elements of a block node.
 func GetBlock(node *sx.Pair) *sx.Pair { return node.Tail() }
 
+// MakeInline builds an inline node.
+func MakeInline(inlines ...*sx.Pair) *sx.Pair {
+	var lb sx.ListBuilder
+	lb.Add(SymInline)
+	for _, inl := range inlines {
+		lb.Add(inl)
+	}
+	return lb.List()
+}
+
 // MakeInlineList builds an inline node from a list of inlines.
 func MakeInlineList(inlines *sx.Pair) *sx.Pair { return inlines.Cons(SymInline) }
 
