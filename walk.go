@@ -46,7 +46,7 @@ func Walk(v Visitor, node *sx.Pair, alst *sx.Pair) sx.Object {
 	}
 
 	if sym, isSymbol := sx.GetSymbol(node.Car()); isSymbol {
-		if fn, found := walkChildren[sym]; found {
+		if fn, found := mapWalkChildren[sym]; found {
 			node = fn(v, node, alst)
 		}
 	}
@@ -81,7 +81,7 @@ func WalkIt(v VisitorIt, node *sx.Pair, alst *sx.Pair) {
 	}
 
 	if sym, isSymbol := sx.GetSymbol(node.Car()); isSymbol {
-		if fn, found := walkChildrenIt[sym]; found {
+		if fn, found := mapWalkChildrenIt[sym]; found {
 			fn(v, node, alst)
 		}
 	}
@@ -104,11 +104,11 @@ var symWalkPos = sx.MakeSymbol("walk-pos")
 type walkChildrenMap map[*sx.Symbol]func(Visitor, *sx.Pair, *sx.Pair) *sx.Pair
 type walkChildrenItMap map[*sx.Symbol]func(VisitorIt, *sx.Pair, *sx.Pair)
 
-var walkChildren walkChildrenMap
-var walkChildrenIt walkChildrenItMap
+var mapWalkChildren walkChildrenMap
+var mapWalkChildrenIt walkChildrenItMap
 
 func init() {
-	walkChildren = walkChildrenMap{
+	mapWalkChildren = walkChildrenMap{
 		SymBlock:         walkChildrenTail,
 		SymPara:          walkChildrenTail,
 		SymRegionBlock:   walkChildrenRegion,
@@ -140,7 +140,7 @@ func init() {
 		SymFormatSub:    walkChildrenInlines2,
 		SymFormatSuper:  walkChildrenInlines2,
 	}
-	walkChildrenIt = walkChildrenItMap{
+	mapWalkChildrenIt = walkChildrenItMap{
 		SymBlock:         walkListIt1,
 		SymPara:          walkListIt1,
 		SymRegionBlock:   walkChildrenRegionIt,
@@ -177,23 +177,19 @@ func init() {
 func walkChildrenTail(v Visitor, node *sx.Pair, alst *sx.Pair) *sx.Pair {
 	var lb sx.ListBuilder
 	lb.Add(node.Car())
-	pos, pair := 0, sx.Cons(symWalkPos, sx.Int64(0))
-	for n := range node.Tail().Pairs() {
-		obj := Walk(v, n.Head(), alst.Cons(pair))
-		pos++
-		pair.SetCdr(sx.Int64(pos))
-		if !sx.IsNil(obj) {
-			lb.Add(obj)
-		}
-	}
-	return lb.List()
+	return walkChildren(v, node.Tail(), alst, &lb)
 }
 
 func walkChildrenList(v Visitor, lst *sx.Pair, alst *sx.Pair) *sx.Pair {
 	var lb sx.ListBuilder
+	return walkChildren(v, lst, alst, &lb)
+}
+
+func walkChildren(v Visitor, lst *sx.Pair, alst *sx.Pair, lb *sx.ListBuilder) *sx.Pair {
 	pos, pair := 0, sx.Cons(symWalkPos, sx.Int64(0))
+	alst = alst.Cons(pair)
 	for n := range lst.Pairs() {
-		obj := Walk(v, n.Head(), alst.Cons(pair))
+		obj := Walk(v, n.Head(), alst)
 		pos++
 		pair.SetCdr(sx.Int64(pos))
 		if !sx.IsNil(obj) {
@@ -209,8 +205,9 @@ func WalkItList(v VisitorIt, lst *sx.Pair, skip int, alst *sx.Pair) {
 		lst = lst.Tail()
 	}
 	pos, pair := 0, sx.Cons(symWalkPos, sx.Int64(0))
+	alst = alst.Cons(pair)
 	for n := range lst.Pairs() {
-		WalkIt(v, n.Head(), alst.Cons(pair))
+		WalkIt(v, n.Head(), alst)
 		pos++
 		pair.SetCdr(sx.Int64(pos))
 	}
