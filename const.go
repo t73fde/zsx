@@ -21,7 +21,7 @@ var (
 	SymBlock  = sx.MakeSymbol("BLOCK")
 	SymInline = sx.MakeSymbol("INLINE")
 
-	// Symbols for Zettel noMakede types.
+	// Symbols for Zettel node types.
 	SymBLOB            = sx.MakeSymbol("BLOB")
 	SymCell            = sx.MakeSymbol("CELL")
 	SymCite            = sx.MakeSymbol("CITE")
@@ -72,6 +72,13 @@ var (
 	SymRefStateHosted   = sx.MakeSymbol("HOSTED")   // e.g. ./foo ../foo /foo /foo/bar
 	SymRefStateInvalid  = sx.MakeSymbol("INVALID")  // e.g. :t73f.de/r/zsx
 	SymRefStateSelf     = sx.MakeSymbol("SELF")     // e.g. . .#ext #ext
+
+	// Special symbol for later splicing nodes in a list.
+	//
+	// Spicing may occur, if a Walk Visitor wants to return more than one
+	// value. The walking processes will (recursively) flatten a splice node
+	// into a (flat) list of nodes.
+	SymSpecialSplice = sx.MakeSymbol("*SPLICE-NODES*")
 )
 
 // Constants for attributes and their values

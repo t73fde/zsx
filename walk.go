@@ -190,13 +190,26 @@ func walkChildren(v Visitor, lst *sx.Pair, alst *sx.Pair, lb *sx.ListBuilder) *s
 	alst = alst.Cons(pair)
 	for n := range lst.Pairs() {
 		obj := Walk(v, n.Head(), alst)
+		flattenChildren(lb, obj)
 		pos++
 		pair.SetCdr(sx.Int64(pos))
-		if !sx.IsNil(obj) {
-			lb.Add(obj)
-		}
 	}
 	return lb.List()
+}
+
+func flattenChildren(lb *sx.ListBuilder, obj sx.Object) {
+	if sx.IsNil(obj) {
+		return
+	}
+	if pair, isPair := sx.GetPair(obj); isPair {
+		if sym, isSymbol := sx.GetSymbol(pair.Car()); isSymbol && SymSpecialSplice.IsEqualSymbol(sym) {
+			for child := range pair.Tail().Values() {
+				flattenChildren(lb, child)
+			}
+			return
+		}
+	}
+	lb.Add(obj)
 }
 
 // WalkItList will WalkIt for all elements of the list, after skipping the first elements.
