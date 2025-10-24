@@ -17,7 +17,7 @@ import (
 	"t73f.de/r/sx"
 )
 
-// Visitor is walking the sx-based AST.
+// Visitor is walking the SZ-based AST.
 //
 // First, VisitBefore is called. If it returned a false value, all child nodes
 // are traversed and then VisitAfter is called. If VisitBefore returned a true
@@ -37,6 +37,10 @@ type Visitor interface {
 }
 
 // Walk a sx-based AST through a Visitor.
+//
+// Walk returns an [sx.Object] (and not a *[sx.Pair]) because a [Visitor] may
+// return something completely different to a list. For example, it may return
+// a user-defined object, which consumes an SZ-based syntax tree.
 func Walk(v Visitor, node *sx.Pair, alst *sx.Pair) sx.Object {
 	if node == nil {
 		return node
@@ -53,20 +57,20 @@ func Walk(v Visitor, node *sx.Pair, alst *sx.Pair) sx.Object {
 	return v.VisitAfter(node, alst)
 }
 
-// VisitorIt is for walking the sx-based AST, using only side-effects.
+// VisitorIt is for walking the SZ-based AST, but only for side-effects.
 //
-// VisitBefore and VisitAfter have the same semantic as in the Visitor
-// interface, but no objects are returned.
+// VisitItBefore and VisitItAfter have the same semantic as VisitBefore /
+// VisitAfter in the Visitor interface, but no objects are returned.
 type VisitorIt interface {
-	// VisitBefore is called before child nodes are traversed. If it returns
+	// VisitItBefore is called before child nodes are traversed. If it returns
 	// a true value, the (recursive) walking process ends. If a false value is
-	// returned, all child nodes are traversed and after that VisitAfter is
+	// returned, all child nodes are traversed and after that VisitItAfter is
 	// called.
-	VisitBefore(node *sx.Pair, alst *sx.Pair) bool
+	VisitItBefore(node *sx.Pair, alst *sx.Pair) bool
 
-	// VisitAfter is called, if the corresponding VisitBefore returned a
+	// VisitItAfter is called, if the corresponding VisitBefore returned a
 	// a false value, and when all child nodes were traversed.
-	VisitAfter(node *sx.Pair, alst *sx.Pair)
+	VisitItAfter(node *sx.Pair, alst *sx.Pair)
 }
 
 // WalkIt walks a sx-based AST with the guidance of a Visitor. It will never
@@ -76,7 +80,7 @@ func WalkIt(v VisitorIt, node *sx.Pair, alst *sx.Pair) {
 	if node == nil {
 		return
 	}
-	if v.VisitBefore(node, alst) {
+	if v.VisitItBefore(node, alst) {
 		return
 	}
 
@@ -85,7 +89,7 @@ func WalkIt(v VisitorIt, node *sx.Pair, alst *sx.Pair) {
 			fn(v, node, alst)
 		}
 	}
-	v.VisitAfter(node, alst)
+	v.VisitItAfter(node, alst)
 }
 
 // GetWalkPos returns the position of the current element in it parent list.
@@ -100,6 +104,16 @@ func GetWalkPos(alst *sx.Pair) int {
 }
 
 var symWalkPos = sx.MakeSymbol("walk-pos")
+
+// GetWalkList returns the list of the current node and all subsequent nodes.
+func GetWalkList(alst *sx.Pair) *sx.Pair {
+	if pair := alst.Assoc(symWalkList); pair != nil {
+		return pair.Tail()
+	}
+	return nil
+}
+
+var symWalkList = sx.MakeSymbol("walk-list")
 
 type walkChildrenMap map[*sx.Symbol]func(Visitor, *sx.Pair, *sx.Pair) *sx.Pair
 type walkChildrenItMap map[*sx.Symbol]func(VisitorIt, *sx.Pair, *sx.Pair)
@@ -186,13 +200,14 @@ func walkChildrenList(v Visitor, lst *sx.Pair, alst *sx.Pair) *sx.Pair {
 }
 
 func walkChildren(v Visitor, lst *sx.Pair, alst *sx.Pair, lb *sx.ListBuilder) *sx.Pair {
-	pos, pair := 0, sx.Cons(symWalkPos, sx.Int64(0))
-	alst = alst.Cons(pair)
+	pos, pairPos, pairList := 0, sx.Cons(symWalkPos, sx.Int64(0)), sx.Cons(symWalkList, sx.Nil())
+	alst = alst.Cons(pairPos).Cons(pairList)
 	for n := range lst.Pairs() {
+		pairList.SetCdr(n)
 		obj := Walk(v, n.Head(), alst)
 		flattenChildren(lb, obj)
 		pos++
-		pair.SetCdr(sx.Int64(pos))
+		pairPos.SetCdr(sx.Int64(pos))
 	}
 	return lb.List()
 }
@@ -217,12 +232,13 @@ func WalkItList(v VisitorIt, lst *sx.Pair, skip int, alst *sx.Pair) {
 	for range skip {
 		lst = lst.Tail()
 	}
-	pos, pair := 0, sx.Cons(symWalkPos, sx.Int64(0))
-	alst = alst.Cons(pair)
+	pos, pairPos, pairList := 0, sx.Cons(symWalkPos, sx.Int64(0)), sx.Cons(symWalkList, sx.Nil())
+	alst = alst.Cons(pairPos).Cons(pairList)
 	for n := range lst.Pairs() {
+		pairList.SetCdr(n)
 		WalkIt(v, n.Head(), alst)
 		pos++
-		pair.SetCdr(sx.Int64(pos))
+		pairPos.SetCdr(sx.Int64(pos))
 	}
 }
 func walkListIt1(v VisitorIt, node *sx.Pair, alst *sx.Pair) { WalkItList(v, node, 1, alst) }
