@@ -118,6 +118,9 @@ func (a Attributes) HasClass(s string) bool { return a.Has("class", s) }
 
 // GetAttributes traverses a s-expression list and returns an attribute structure.
 func GetAttributes(seq *sx.Pair) (result Attributes) {
+	if seq == nil {
+		return nil
+	}
 	for obj := range seq.Values() {
 		pair, isPair := sx.GetPair(obj)
 		if !isPair || pair == nil {
