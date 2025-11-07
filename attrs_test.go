@@ -14,6 +14,7 @@
 package zsx_test
 
 import (
+	"maps"
 	"testing"
 
 	"t73f.de/r/zsx"
@@ -73,6 +74,21 @@ func TestHasClass(t *testing.T) {
 		got := a.HasClass(tc.class)
 		if tc.exp != got {
 			t.Errorf("%q.HasClass(%q)=%v, but got %v", tc.classes, tc.class, tc.exp, got)
+		}
+	}
+}
+
+func TestAssoc(t *testing.T) {
+	testcases := []zsx.Attributes{
+		{},
+		{"": ""},
+		{"abc": "def", "": "", "-": "xyz"},
+	}
+	for i, tc := range testcases {
+		assoc := tc.AsAssoc()
+		a := zsx.GetAttributes(assoc)
+		if !maps.Equal(tc, a) {
+			t.Errorf("%d: %v != %v", i, tc, a)
 		}
 	}
 }

@@ -116,6 +116,18 @@ func (a Attributes) GetClasses() []string { return a.Values("class") }
 // HasClass returns true, if attributes contains the given class.
 func (a Attributes) HasClass(s string) bool { return a.Has("class", s) }
 
+// AsAssoc returns the attributes as an assoc list.
+//
+// It is partly the reverse operation of [GetAttributes]:
+// `maps.Equal(GetAttributes(a.AsAssoc()), a)`.
+func (a Attributes) AsAssoc() *sx.Pair {
+	var lb sx.ListBuilder
+	for k, v := range a {
+		lb.Add(sx.Cons(sx.MakeString(k), sx.MakeString(v)))
+	}
+	return lb.List()
+}
+
 // GetAttributes traverses a s-expression list and returns an attribute structure.
 func GetAttributes(seq *sx.Pair) (result Attributes) {
 	if seq == nil {
