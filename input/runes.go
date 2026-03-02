@@ -28,3 +28,13 @@ func IsSpace(ch rune) bool {
 
 // IsSpace returns true if current character is a whitespace.
 func (inp *Input) IsSpace() bool { return IsSpace(inp.Ch) }
+
+// IsOnlySpace returns true if the given string contains only whitespace characters.
+func IsOnlySpace(s string) bool {
+	for _, ch := range s {
+		if !IsSpace(ch) {
+			return false
+		}
+	}
+	return true
+}
