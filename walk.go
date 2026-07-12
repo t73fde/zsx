@@ -260,9 +260,9 @@ func walkChildrenRegionIt(v VisitorIt, node *sx.Pair, alst *sx.Pair) {
 }
 
 func walkHeadingChildren(v Visitor, node *sx.Pair, alst *sx.Pair) *sx.Pair {
-	level, attrs, inlines, slug, fragment := GetHeading(node)
+	attrs, level, inlines, slug, fragment := GetHeading(node)
 	newInlines := walkChildrenList(v, inlines, alst)
-	return MakeHeading(level, attrs, newInlines, slug, fragment)
+	return MakeHeading(attrs, level, newInlines, slug, fragment)
 }
 
 func walkListChildren(v Visitor, node *sx.Pair, alst *sx.Pair) *sx.Pair {

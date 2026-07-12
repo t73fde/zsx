@@ -115,32 +115,32 @@ func GetRegion(node *sx.Pair) (*sx.Symbol, *sx.Pair, *sx.Pair, *sx.Pair) {
 }
 
 // MakeHeading builds a heading node.
-func MakeHeading(level int, attrs, text *sx.Pair, slug, fragment string) *sx.Pair {
+func MakeHeading(attrs *sx.Pair, level int, text *sx.Pair, slug, fragment string) *sx.Pair {
 	return text.
 		Cons(sx.MakeString(fragment)).
 		Cons(sx.MakeString(slug)).
-		Cons(attrs).
 		Cons(sx.Int64(level)).
+		Cons(attrs).
 		Cons(SymHeading)
 }
 
 // GetHeading returns the elements of a heading node.
-func GetHeading(node *sx.Pair) (int, *sx.Pair, *sx.Pair, string, string) {
-	levelNode := node.Tail()
+func GetHeading(node *sx.Pair) (*sx.Pair, int, *sx.Pair, string, string) {
+	attrsNode := node.Tail()
+	levelNode := attrsNode.Tail()
 	if levelNum, isNum := sx.GetNumber(levelNode.Car()); isNum {
 		if level, isInt := levelNum.(sx.Int64); isInt {
-			attrsNode := levelNode.Tail()
-			slugNode := attrsNode.Tail()
+			slugNode := levelNode.Tail()
 			if slug, isSlug := sx.GetString(slugNode.Car()); isSlug {
 				fragmentNode := slugNode.Tail()
 				if fragment, isFragment := sx.GetString(fragmentNode.Car()); isFragment {
 					inlines := fragmentNode.Tail()
-					return int(level), attrsNode.Head(), inlines, slug.GetValue(), fragment.GetValue()
+					return attrsNode.Head(), int(level), inlines, slug.GetValue(), fragment.GetValue()
 				}
 			}
 		}
 	}
-	return 0, nil, nil, "", ""
+	return nil, 0, nil, "", ""
 }
 
 // MakeThematic builds a node to implement a thematic break.
