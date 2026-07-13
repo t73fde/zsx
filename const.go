@@ -40,6 +40,7 @@ var (
 	SymFormatStrong    = sx.MakeSymbol("FORMAT-STRONG")
 	SymHard            = sx.MakeSymbol("HARD")
 	SymHeading         = sx.MakeSymbol("HEADING")
+	SymListItem        = sx.MakeSymbol("ITEM")
 	SymLink            = sx.MakeSymbol("LINK")
 	SymListOrdered     = sx.MakeSymbol("ORDERED")
 	SymListUnordered   = sx.MakeSymbol("UNORDERED")
@@ -59,7 +60,6 @@ var (
 	SymText            = sx.MakeSymbol("TEXT")
 	SymThematic        = sx.MakeSymbol("THEMATIC")
 	SymTransclude      = sx.MakeSymbol("TRANSCLUDE")
-	SymUnknown         = sx.MakeSymbol("UNKNOWN")
 	SymVerbatimCode    = sx.MakeSymbol("VERBATIM-CODE")
 	SymVerbatimComment = sx.MakeSymbol("VERBATIM-COMMENT")
 	SymVerbatimEval    = sx.MakeSymbol("VERBATIM-EVAL")
@@ -78,10 +78,10 @@ var (
 	// Spicing may occur, if a Walk Visitor wants to return more than one
 	// value. The walking processes will (recursively) flatten a splice node
 	// into a (flat) list of nodes.
-	SymSpecialSplice = sx.MakeSymbol("*SPLICE-NODES*")
+	SymSpecialSplice = sx.MakeSymbol("*ZSX-SPLICE-NODES*")
 
 	// Special attribute symbols, to be used internal
-	SymSpecialID = sx.MakeSymbol("ZSX-ID")
+	SymSpecialID = sx.MakeSymbol("*ZSX-ID*")
 )
 
 // Constants for attributes and their values

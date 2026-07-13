@@ -15,12 +15,16 @@ package zsx
 
 import (
 	"encoding/base64"
+	"fmt"
 
 	"t73f.de/r/sx"
 )
 
 // MakeBlock builds a block node.
 func MakeBlock(blocks ...*sx.Pair) *sx.Pair {
+	if len(blocks) == 0 {
+		return sx.MakeList(SymBlock)
+	}
 	var lb sx.ListBuilder
 	lb.Add(SymBlock)
 	for _, block := range blocks {
@@ -80,6 +84,17 @@ func GetList(node *sx.Pair) (*sx.Symbol, *sx.Pair, *sx.Pair) {
 		return sym, attrsNode.Head(), blocks
 	}
 	return nil, nil, nil
+}
+
+// MakeListItem builds a list item node.
+func MakeListItem(attrs *sx.Pair, elements *sx.Pair) *sx.Pair {
+	return elements.Cons(attrs).Cons(SymListItem)
+}
+
+// GetListItem returns the attribute and the elements of the list item.
+func GetListItem(node *sx.Pair) (*sx.Pair, *sx.Pair) {
+	attrsNode := node.Tail()
+	return attrsNode.Head(), attrsNode.Tail()
 }
 
 // MakeVerbatim builds a node for verbatim text.
@@ -433,4 +448,9 @@ func decodeBinary(syntax, content string) []byte {
 		return data
 	}
 	return nil
+}
+
+// MakeSpecialNotFound returns a symbol that signals an unknwon symbol with value s.
+func MakeSpecialNotFound(s string) *sx.Symbol {
+	return sx.MakeSymbol(fmt.Sprintf("*ZSX-NOT-FOUND:%v*", s))
 }

@@ -132,6 +132,7 @@ func init() {
 		SymListOrdered:   walkListChildren,
 		SymListUnordered: walkListChildren,
 		SymListQuote:     walkListChildren,
+		SymListItem:      walkListItemChildren,
 		SymDescription:   walkDescriptionChildren,
 		SymTable:         walkTableChildren,
 		SymCell:          walkCellChildren,
@@ -164,6 +165,7 @@ func init() {
 		SymListOrdered:   walkListIt2,
 		SymListUnordered: walkListIt2,
 		SymListQuote:     walkListIt2,
+		SymListItem:      walkListIt2,
 		SymDescription:   walkDescriptionChildrenIt,
 		SymTable:         walkTableChildrenIt,
 		SymCell:          walkListIt2,
@@ -268,6 +270,12 @@ func walkListChildren(v Visitor, node *sx.Pair, alst *sx.Pair) *sx.Pair {
 	sym, attrs, items := GetList(node)
 	newItems := walkChildrenList(v, items, alst)
 	return MakeList(sym, attrs, newItems)
+}
+
+func walkListItemChildren(v Visitor, node *sx.Pair, alst *sx.Pair) *sx.Pair {
+	attrs, items := GetListItem(node)
+	newItems := walkChildrenList(v, items, alst)
+	return MakeListItem(attrs, newItems)
 }
 
 func walkDescriptionChildren(v Visitor, dn *sx.Pair, alst *sx.Pair) *sx.Pair {
