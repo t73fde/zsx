@@ -92,3 +92,25 @@ func TestAssoc(t *testing.T) {
 		}
 	}
 }
+
+func TestCleanSpecial(t *testing.T) {
+	t.Parallel()
+	orig := zsx.Attributes{"id": "123"}
+	clone := orig.Clone()
+	clone.CleanSpecial()
+	if !maps.Equal(orig, clone) {
+		t.Errorf("1: orig %v vs cleaned %v", orig, clone)
+	}
+
+	clone[zsx.SymSpecialID.GetValue()] = "17"
+	clone.CleanSpecial()
+	if !maps.Equal(orig, clone) {
+		t.Errorf("2: orig %v vs cleaned %v", orig, clone)
+	}
+
+	a := zsx.Attributes{zsx.SymSpecialID.GetValue(): "23"}
+	a.CleanSpecial()
+	if len(a) != 0 {
+		t.Errorf("a should be empty, but: %v", a)
+	}
+}

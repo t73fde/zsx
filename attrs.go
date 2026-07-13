@@ -153,3 +153,12 @@ func GetAttributes(seq *sx.Pair) (result Attributes) {
 	}
 	return result
 }
+
+// CleanSpecial removes all values which have keys with a special / internal meaning.
+func (a Attributes) CleanSpecial() {
+	for k := range a {
+		if strings.HasPrefix(k, "ZSX-") {
+			delete(a, k)
+		}
+	}
+}

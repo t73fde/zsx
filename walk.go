@@ -160,7 +160,7 @@ func init() {
 		SymRegionBlock:   walkChildrenRegionIt,
 		SymRegionQuote:   walkChildrenRegionIt,
 		SymRegionVerse:   walkChildrenRegionIt,
-		SymHeading:       walkListIt5,
+		SymHeading:       walkListIt3,
 		SymListOrdered:   walkListIt2,
 		SymListUnordered: walkListIt2,
 		SymListQuote:     walkListIt2,
@@ -172,7 +172,7 @@ func init() {
 
 		SymInline:       walkListIt1,
 		SymEndnote:      walkListIt2,
-		SymMark:         walkListIt4,
+		SymMark:         walkListIt3,
 		SymLink:         walkListIt3,
 		SymEmbed:        walkListIt4,
 		SymCite:         walkListIt3,
@@ -245,7 +245,6 @@ func walkListIt1(v VisitorIt, node *sx.Pair, alst *sx.Pair) { WalkItList(v, node
 func walkListIt2(v VisitorIt, node *sx.Pair, alst *sx.Pair) { WalkItList(v, node, 2, alst) }
 func walkListIt3(v VisitorIt, node *sx.Pair, alst *sx.Pair) { WalkItList(v, node, 3, alst) }
 func walkListIt4(v VisitorIt, node *sx.Pair, alst *sx.Pair) { WalkItList(v, node, 4, alst) }
-func walkListIt5(v VisitorIt, node *sx.Pair, alst *sx.Pair) { WalkItList(v, node, 5, alst) }
 
 func walkChildrenRegion(v Visitor, node *sx.Pair, alst *sx.Pair) *sx.Pair {
 	sym, attrs, blocks, inlines := GetRegion(node)
@@ -260,9 +259,9 @@ func walkChildrenRegionIt(v VisitorIt, node *sx.Pair, alst *sx.Pair) {
 }
 
 func walkHeadingChildren(v Visitor, node *sx.Pair, alst *sx.Pair) *sx.Pair {
-	attrs, level, inlines, slug, fragment := GetHeading(node)
+	attrs, level, inlines := GetHeading(node)
 	newInlines := walkChildrenList(v, inlines, alst)
-	return MakeHeading(attrs, level, newInlines, slug, fragment)
+	return MakeHeading(attrs, level, newInlines)
 }
 
 func walkListChildren(v Visitor, node *sx.Pair, alst *sx.Pair) *sx.Pair {
@@ -333,9 +332,9 @@ func walkBLOBChildrenIt(v VisitorIt, bn *sx.Pair, alst *sx.Pair) {
 }
 
 func walkMarkChildren(v Visitor, mn *sx.Pair, alst *sx.Pair) *sx.Pair {
-	mark, slug, fragment, inlines := GetMark(mn)
+	attrs, mark, inlines := GetMark(mn)
 	newInlines := walkChildrenList(v, inlines, alst)
-	return MakeMark(mark, slug, fragment, newInlines)
+	return MakeMark(attrs, mark, newInlines)
 }
 
 func walkEmbedChildren(v Visitor, en *sx.Pair, alst *sx.Pair) *sx.Pair {

@@ -115,32 +115,23 @@ func GetRegion(node *sx.Pair) (*sx.Symbol, *sx.Pair, *sx.Pair, *sx.Pair) {
 }
 
 // MakeHeading builds a heading node.
-func MakeHeading(attrs *sx.Pair, level int, text *sx.Pair, slug, fragment string) *sx.Pair {
+func MakeHeading(attrs *sx.Pair, level int, text *sx.Pair) *sx.Pair {
 	return text.
-		Cons(sx.MakeString(fragment)).
-		Cons(sx.MakeString(slug)).
 		Cons(sx.Int64(level)).
 		Cons(attrs).
 		Cons(SymHeading)
 }
 
 // GetHeading returns the elements of a heading node.
-func GetHeading(node *sx.Pair) (*sx.Pair, int, *sx.Pair, string, string) {
+func GetHeading(node *sx.Pair) (*sx.Pair, int, *sx.Pair) {
 	attrsNode := node.Tail()
 	levelNode := attrsNode.Tail()
 	if levelNum, isNum := sx.GetNumber(levelNode.Car()); isNum {
 		if level, isInt := levelNum.(sx.Int64); isInt {
-			slugNode := levelNode.Tail()
-			if slug, isSlug := sx.GetString(slugNode.Car()); isSlug {
-				fragmentNode := slugNode.Tail()
-				if fragment, isFragment := sx.GetString(fragmentNode.Car()); isFragment {
-					inlines := fragmentNode.Tail()
-					return attrsNode.Head(), int(level), inlines, slug.GetValue(), fragment.GetValue()
-				}
-			}
+			return attrsNode.Head(), int(level), levelNode.Tail()
 		}
 	}
-	return nil, 0, nil, "", ""
+	return nil, 0, nil
 }
 
 // MakeThematic builds a node to implement a thematic break.
@@ -362,24 +353,18 @@ func GetEndnote(node *sx.Pair) (*sx.Pair, *sx.Pair) {
 }
 
 // MakeMark builds a mark note.
-func MakeMark(mark string, slug, fragment string, inlines *sx.Pair) *sx.Pair {
-	return inlines.Cons(sx.MakeString(fragment)).Cons(sx.MakeString(slug)).Cons(sx.MakeString(mark)).Cons(SymMark)
+func MakeMark(attrs *sx.Pair, mark string, inlines *sx.Pair) *sx.Pair {
+	return inlines.Cons(sx.MakeString(mark)).Cons(attrs).Cons(SymMark)
 }
 
 // GetMark returns the elements of a mark node.
-func GetMark(node *sx.Pair) (string, string, string, *sx.Pair) {
-	markNode := node.Tail()
+func GetMark(node *sx.Pair) (*sx.Pair, string, *sx.Pair) {
+	attrsNode := node.Tail()
+	markNode := attrsNode.Tail()
 	if mark, isMark := sx.GetString(markNode.Car()); isMark {
-		slugNode := markNode.Tail()
-		if slug, isSlug := sx.GetString(slugNode.Car()); isSlug {
-			fragmentNode := slugNode.Tail()
-			if fragment, isFragment := sx.GetString(fragmentNode.Car()); isFragment {
-				inlines := fragmentNode.Tail()
-				return mark.GetValue(), slug.GetValue(), fragment.GetValue(), inlines
-			}
-		}
+		return attrsNode.Head(), mark.GetValue(), markNode.Tail()
 	}
-	return "", "", "", nil
+	return nil, "", nil
 }
 
 // MakeFormat builds an inline formatting node.

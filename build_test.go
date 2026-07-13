@@ -24,10 +24,8 @@ func TestBuildHeading(t *testing.T) {
 	expAttrs := makeSimpleAttrs()
 	const expLevel = 2
 	expText := zsx.MakeText("text")
-	const expSlug = "slug"
-	const expFrag = "fragment"
-	heading := zsx.MakeHeading(expAttrs, expLevel, expText, expSlug, expFrag)
-	gotAttrs, gotLevel, gotText, gotSlug, gotFrag := zsx.GetHeading(heading)
+	heading := zsx.MakeHeading(expAttrs, expLevel, expText)
+	gotAttrs, gotLevel, gotText := zsx.GetHeading(heading)
 	if expAttrs != gotAttrs {
 		t.Errorf("attrs: exp=%v, got=%v", expAttrs, gotAttrs)
 	}
@@ -37,11 +35,22 @@ func TestBuildHeading(t *testing.T) {
 	if expText != gotText {
 		t.Errorf("text: exp=%v, got=%v", expText, gotText)
 	}
-	if expSlug != gotSlug {
-		t.Errorf("slug: exp=%v, got=%v", expSlug, gotSlug)
+}
+
+func TestBuildMark(t *testing.T) {
+	expAttrs := makeSimpleAttrs()
+	const expMark = "mark"
+	expText := zsx.MakeText("text")
+	mark := zsx.MakeMark(expAttrs, expMark, expText)
+	gotAttrs, gotMark, gotText := zsx.GetMark(mark)
+	if expAttrs != gotAttrs {
+		t.Errorf("attrs: exp=%v, got=%v", expAttrs, gotAttrs)
 	}
-	if expFrag != gotFrag {
-		t.Errorf("fragment: exp=%v, got=%v", expFrag, gotFrag)
+	if expMark != gotMark {
+		t.Errorf("level: exp=%v, got=%v", expMark, gotMark)
+	}
+	if expText != gotText {
+		t.Errorf("text: exp=%v, got=%v", expText, gotText)
 	}
 }
 

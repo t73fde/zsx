@@ -79,6 +79,9 @@ var (
 	// value. The walking processes will (recursively) flatten a splice node
 	// into a (flat) list of nodes.
 	SymSpecialSplice = sx.MakeSymbol("*SPLICE-NODES*")
+
+	// Special attribute symbols, to be used internal
+	SymSpecialID = sx.MakeSymbol("ZSX-ID")
 )
 
 // Constants for attributes and their values
