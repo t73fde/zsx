@@ -78,7 +78,7 @@ func MakeList(sym *sx.Symbol, attrs *sx.Pair, items *sx.Pair) *sx.Pair {
 
 // GetList returns the elements of a list node.
 func GetList(node *sx.Pair) (*sx.Symbol, *sx.Pair, *sx.Pair) {
-	if sym, isSymbol := sx.GetSymbol(node.Car()); isSymbol {
+	if sym := NodeSymbol(node); sym != nil {
 		attrsNode := node.Tail()
 		blocks := attrsNode.Tail()
 		return sym, attrsNode.Head(), blocks
@@ -104,7 +104,7 @@ func MakeVerbatim(sym *sx.Symbol, attrs *sx.Pair, content string) *sx.Pair {
 
 // GetVerbatim returns the elements of a verbatim node.
 func GetVerbatim(node *sx.Pair) (*sx.Symbol, *sx.Pair, string) {
-	if sym, isSymbol := sx.GetSymbol(node.Car()); isSymbol {
+	if sym := NodeSymbol(node); sym != nil {
 		attrsNode := node.Tail()
 		if s, isString := sx.GetString(attrsNode.Tail().Car()); isString {
 			return sym, attrsNode.Head(), s.GetValue()
@@ -120,7 +120,7 @@ func MakeRegion(sym *sx.Symbol, attrs *sx.Pair, blocks *sx.Pair, inlines *sx.Pai
 
 // GetRegion returns the elements of a region node.
 func GetRegion(node *sx.Pair) (*sx.Symbol, *sx.Pair, *sx.Pair, *sx.Pair) {
-	if sym, isSymbol := sx.GetSymbol(node.Car()); isSymbol {
+	if sym := NodeSymbol(node); sym != nil {
 		attrsNode := node.Tail()
 		blocksNode := attrsNode.Tail()
 		inlines := blocksNode.Tail()
@@ -389,7 +389,7 @@ func MakeFormat(sym *sx.Symbol, attrs, inlines *sx.Pair) *sx.Pair {
 
 // GetFormat returns the elements of a formatting node.
 func GetFormat(node *sx.Pair) (*sx.Symbol, *sx.Pair, *sx.Pair) {
-	if sym, isSymbol := sx.GetSymbol(node.Car()); isSymbol {
+	if sym := NodeSymbol(node); sym != nil {
 		attrsNode := node.Tail()
 		inlines := attrsNode.Tail()
 		return sym, attrsNode.Head(), inlines
@@ -404,7 +404,7 @@ func MakeLiteral(sym *sx.Symbol, attrs *sx.Pair, text string) *sx.Pair {
 
 // GetLiteral returns the elements of a literal node.
 func GetLiteral(node *sx.Pair) (*sx.Symbol, *sx.Pair, string) {
-	if sym, isSymbol := sx.GetSymbol(node.Car()); isSymbol {
+	if sym := NodeSymbol(node); sym != nil {
 		attrsNode := node.Tail()
 		if s, isString := sx.GetString(attrsNode.Tail().Car()); isString {
 			return sym, attrsNode.Head(), s.GetValue()
@@ -420,15 +420,13 @@ func MakeReference(sym *sx.Symbol, val string) *sx.Pair {
 
 // GetReference returns the reference symbol and value.
 func GetReference(ref *sx.Pair) (*sx.Symbol, string) {
-	if ref != nil {
-		if sym, isSymbol := sx.GetSymbol(ref.Car()); isSymbol {
-			val, isString := sx.GetString(ref.Cdr())
-			if !isString {
-				val, isString = sx.GetString(ref.Tail().Car())
-			}
-			if isString {
-				return sym, val.GetValue()
-			}
+	if sym := NodeSymbol(ref); sym != nil {
+		val, isString := sx.GetString(ref.Cdr())
+		if !isString {
+			val, isString = sx.GetString(ref.Tail().Car())
+		}
+		if isString {
+			return sym, val.GetValue()
 		}
 	}
 	return nil, ""

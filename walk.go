@@ -49,7 +49,7 @@ func Walk(v Visitor, node *sx.Pair, alst *sx.Pair) sx.Object {
 		return result
 	}
 
-	if sym, isSymbol := sx.GetSymbol(node.Car()); isSymbol {
+	if sym := NodeSymbol(node); sym != nil {
 		if fn, found := mapWalkChildren[sym]; found {
 			node = fn(v, node, alst)
 		}
@@ -84,7 +84,7 @@ func WalkIt(v VisitorIt, node *sx.Pair, alst *sx.Pair) {
 		return
 	}
 
-	if sym, isSymbol := sx.GetSymbol(node.Car()); isSymbol {
+	if sym := NodeSymbol(node); sym != nil {
 		if fn, found := mapWalkChildrenIt[sym]; found {
 			fn(v, node, alst)
 		}
@@ -219,7 +219,7 @@ func flattenChildren(lb *sx.ListBuilder, obj sx.Object) {
 		return
 	}
 	if pair, isPair := sx.GetPair(obj); isPair {
-		if sym, isSymbol := sx.GetSymbol(pair.Car()); isSymbol && SymSpecialSplice.IsEqualSymbol(sym) {
+		if sym := NodeSymbol(pair); SymSpecialSplice.IsEqualSymbol(sym) {
 			for child := range pair.Tail().Values() {
 				flattenChildren(lb, child)
 			}
