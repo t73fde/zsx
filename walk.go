@@ -135,6 +135,7 @@ func init() {
 		SymListItem:      walkListItemChildren,
 		SymDescription:   walkDescriptionChildren,
 		SymTable:         walkTableChildren,
+		SymRow:           walkRowChildren,
 		SymCell:          walkCellChildren,
 		SymTransclude:    walkChildrenInlines3,
 		SymBLOB:          walkBLOBChildren,
@@ -168,6 +169,7 @@ func init() {
 		SymListItem:      walkListIt2,
 		SymDescription:   walkDescriptionChildrenIt,
 		SymTable:         walkTableChildrenIt,
+		SymRow:           walkListIt2,
 		SymCell:          walkListIt2,
 		SymTransclude:    walkListIt3,
 		SymBLOB:          walkBLOBChildrenIt,
@@ -313,14 +315,20 @@ func walkTableChildren(v Visitor, tn *sx.Pair, alst *sx.Pair) *sx.Pair {
 	var lb sx.ListBuilder
 	lb.AddN(sym, attrs)
 	for row := range next.Pairs() {
-		lb.Add(walkChildrenList(v, row.Head(), alst))
+		lb.Add(Walk(v, row.Head(), alst))
 	}
 	return lb.List()
 }
 func walkTableChildrenIt(v VisitorIt, tn *sx.Pair, alst *sx.Pair) {
 	for row := range tn.Tail().Tail().Pairs() {
-		WalkItList(v, row.Head(), 0, alst)
+		WalkIt(v, row.Head(), alst)
 	}
+}
+
+func walkRowChildren(v Visitor, node *sx.Pair, alst *sx.Pair) *sx.Pair {
+	attrs, cells := GetRow(node)
+	newCells := walkChildrenList(v, cells, alst)
+	return MakeRow(attrs, newCells)
 }
 
 func walkCellChildren(v Visitor, cn *sx.Pair, alst *sx.Pair) *sx.Pair {

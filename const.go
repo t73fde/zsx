@@ -55,6 +55,7 @@ var (
 	SymRegionBlock     = sx.MakeSymbol("REGION-BLOCK")
 	SymRegionQuote     = sx.MakeSymbol("REGION-QUOTE")
 	SymRegionVerse     = sx.MakeSymbol("REGION-VERSE")
+	SymRow             = sx.MakeSymbol("ROW")
 	SymSoft            = sx.MakeSymbol("SOFT")
 	SymTable           = sx.MakeSymbol("TABLE")
 	SymText            = sx.MakeSymbol("TEXT")

@@ -172,6 +172,17 @@ func GetTable(node *sx.Pair) (*sx.Pair, *sx.Pair, *sx.Pair) {
 	return attrsNode.Head(), headerNode.Head(), rows
 }
 
+// MakeRow builds a row node.
+func MakeRow(attrs *sx.Pair, cells *sx.Pair) *sx.Pair {
+	return cells.Cons(attrs).Cons(SymRow)
+}
+
+// GetRow returns the attribute and the elements of the given row.
+func GetRow(node *sx.Pair) (*sx.Pair, *sx.Pair) {
+	attrsNode := node.Tail()
+	return attrsNode.Head(), attrsNode.Tail()
+}
+
 // MakeCell builds a table cell node.
 func MakeCell(attrs *sx.Pair, inlines *sx.Pair) *sx.Pair { return inlines.Cons(attrs).Cons(SymCell) }
 
