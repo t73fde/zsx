@@ -164,6 +164,31 @@ func GetDescription(node *sx.Pair) (*sx.Pair, *sx.Pair) {
 	return attrsNode.Head(), termsVals
 }
 
+// MakeTerm builds a term node.
+func MakeTerm(attrs *sx.Pair, inlines *sx.Pair) *sx.Pair {
+	return inlines.Cons(attrs).Cons(SymTerm)
+}
+
+// GetTerm returns the attribute and the elements of the given term.
+func GetTerm(node *sx.Pair) (*sx.Pair, *sx.Pair) {
+	attrsNode := node.Tail()
+	return attrsNode.Head(), attrsNode.Tail()
+}
+
+// GetDetail returns all elements of a detail node.
+func GetDetail(node *sx.Pair) *sx.Pair { return node.Tail() }
+
+// MakeEntry builds a description entry node.
+func MakeEntry(attrs *sx.Pair, paras *sx.Pair) *sx.Pair {
+	return paras.Cons(attrs).Cons(SymEntry)
+}
+
+// GetEntry returns the attribute and the elements of the given entry.
+func GetEntry(node *sx.Pair) (*sx.Pair, *sx.Pair) {
+	attrsNode := node.Tail()
+	return attrsNode.Head(), attrsNode.Tail()
+}
+
 // GetTable returns the elements of a table.
 func GetTable(node *sx.Pair) (*sx.Pair, *sx.Pair, *sx.Pair) {
 	attrsNode := node.Tail()

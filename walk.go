@@ -128,33 +128,36 @@ func init() {
 		SymRegionBlock:   walkChildrenRegion,
 		SymRegionQuote:   walkChildrenRegion,
 		SymRegionVerse:   walkChildrenRegion,
-		SymHeading:       walkHeadingChildren,
-		SymListOrdered:   walkListChildren,
-		SymListUnordered: walkListChildren,
-		SymListQuote:     walkListChildren,
-		SymListItem:      walkListItemChildren,
-		SymDescription:   walkDescriptionChildren,
+		SymHeading:       walkChildrenTail3,
+		SymListOrdered:   walkChildrenTail2,
+		SymListUnordered: walkChildrenTail2,
+		SymListQuote:     walkChildrenTail2,
+		SymListItem:      walkChildrenTail2,
+		SymDescription:   walkChildrenTail2,
+		SymTerm:          walkChildrenTail2,
+		SymDetail:        walkChildrenTail,
+		SymEntry:         walkChildrenTail2,
 		SymTable:         walkTableChildren,
-		SymRow:           walkRowChildren,
-		SymCell:          walkCellChildren,
-		SymTransclude:    walkChildrenInlines3,
+		SymRow:           walkChildrenTail2,
+		SymCell:          walkChildrenTail2,
+		SymTransclude:    walkChildrenTail3,
 		SymBLOB:          walkBLOBChildren,
 
 		SymInline:       walkChildrenTail,
-		SymEndnote:      walkChildrenInlines2,
-		SymMark:         walkMarkChildren,
-		SymLink:         walkChildrenInlines3,
+		SymEndnote:      walkChildrenTail2,
+		SymMark:         walkChildrenTail3,
+		SymLink:         walkChildrenTail3,
 		SymEmbed:        walkEmbedChildren,
-		SymCite:         walkChildrenInlines3,
-		SymFormatDelete: walkChildrenInlines2,
-		SymFormatEmph:   walkChildrenInlines2,
-		SymFormatInsert: walkChildrenInlines2,
-		SymFormatMark:   walkChildrenInlines2,
-		SymFormatQuote:  walkChildrenInlines2,
-		SymFormatStrong: walkChildrenInlines2,
-		SymFormatSpan:   walkChildrenInlines2,
-		SymFormatSub:    walkChildrenInlines2,
-		SymFormatSuper:  walkChildrenInlines2,
+		SymCite:         walkChildrenTail3,
+		SymFormatDelete: walkChildrenTail2,
+		SymFormatEmph:   walkChildrenTail2,
+		SymFormatInsert: walkChildrenTail2,
+		SymFormatMark:   walkChildrenTail2,
+		SymFormatQuote:  walkChildrenTail2,
+		SymFormatStrong: walkChildrenTail2,
+		SymFormatSpan:   walkChildrenTail2,
+		SymFormatSub:    walkChildrenTail2,
+		SymFormatSuper:  walkChildrenTail2,
 	}
 	mapWalkChildrenIt = walkChildrenItMap{
 		SymBlock:         walkListIt1,
@@ -167,8 +170,11 @@ func init() {
 		SymListUnordered: walkListIt2,
 		SymListQuote:     walkListIt2,
 		SymListItem:      walkListIt2,
-		SymDescription:   walkDescriptionChildrenIt,
-		SymTable:         walkTableChildrenIt,
+		SymDescription:   walkListIt2,
+		SymTerm:          walkListIt2,
+		SymDetail:        walkListIt1,
+		SymEntry:         walkListIt2,
+		SymTable:         walkListIt2,
 		SymRow:           walkListIt2,
 		SymCell:          walkListIt2,
 		SymTransclude:    walkListIt3,
@@ -196,6 +202,17 @@ func walkChildrenTail(v Visitor, node *sx.Pair, alst *sx.Pair) *sx.Pair {
 	var lb sx.ListBuilder
 	lb.Add(node.Car())
 	return walkChildren(v, node.Tail(), alst, &lb)
+}
+func walkChildrenTail2(v Visitor, node *sx.Pair, alst *sx.Pair) *sx.Pair {
+	sym, next := node.Car(), node.Tail()
+	newElems := walkChildrenList(v, next.Tail(), alst)
+	return newElems.Cons(next.Car()).Cons(sym)
+}
+func walkChildrenTail3(v Visitor, node *sx.Pair, alst *sx.Pair) *sx.Pair {
+	sym, next := node.Car(), node.Tail()
+	attrs, next := next.Car(), next.Tail()
+	newElems := walkChildrenList(v, next.Tail(), alst)
+	return newElems.Cons(next.Car()).Cons(attrs).Cons(sym)
 }
 
 func walkChildrenList(v Visitor, lst *sx.Pair, alst *sx.Pair) *sx.Pair {
@@ -262,51 +279,6 @@ func walkChildrenRegionIt(v VisitorIt, node *sx.Pair, alst *sx.Pair) {
 	WalkItList(v, inlines, 0, alst)
 }
 
-func walkHeadingChildren(v Visitor, node *sx.Pair, alst *sx.Pair) *sx.Pair {
-	attrs, level, inlines := GetHeading(node)
-	newInlines := walkChildrenList(v, inlines, alst)
-	return MakeHeading(attrs, level, newInlines)
-}
-
-func walkListChildren(v Visitor, node *sx.Pair, alst *sx.Pair) *sx.Pair {
-	sym, attrs, items := GetList(node)
-	newItems := walkChildrenList(v, items, alst)
-	return MakeList(sym, attrs, newItems)
-}
-
-func walkListItemChildren(v Visitor, node *sx.Pair, alst *sx.Pair) *sx.Pair {
-	attrs, items := GetListItem(node)
-	newItems := walkChildrenList(v, items, alst)
-	return MakeListItem(attrs, newItems)
-}
-
-func walkDescriptionChildren(v Visitor, dn *sx.Pair, alst *sx.Pair) *sx.Pair {
-	sym, next := dn.Car(), dn.Tail()
-	attrs := next.Car()
-
-	var lb sx.ListBuilder
-	lb.AddN(sym, attrs)
-
-	for n := next.Tail(); n != nil; n = n.Tail() {
-		lb.Add(walkChildrenList(v, n.Head(), alst)) // Term
-		if n = n.Tail(); n == nil {
-			break
-		}
-		lb.Add(Walk(v, n.Head(), alst)) // Values
-	}
-	return lb.List()
-}
-func walkDescriptionChildrenIt(v VisitorIt, dn *sx.Pair, alst *sx.Pair) {
-	for n := dn.Tail().Tail(); n != nil; n = n.Tail() {
-		WalkItList(v, n.Head(), 0, alst)
-		n = n.Tail()
-		if n == nil {
-			break
-		}
-		WalkIt(v, n.Head(), alst)
-	}
-}
-
 func walkTableChildren(v Visitor, tn *sx.Pair, alst *sx.Pair) *sx.Pair {
 	sym, next := tn.Car(), tn.Tail()
 	attrs := next.Head()
@@ -319,23 +291,6 @@ func walkTableChildren(v Visitor, tn *sx.Pair, alst *sx.Pair) *sx.Pair {
 	}
 	return lb.List()
 }
-func walkTableChildrenIt(v VisitorIt, tn *sx.Pair, alst *sx.Pair) {
-	for row := range tn.Tail().Tail().Pairs() {
-		WalkIt(v, row.Head(), alst)
-	}
-}
-
-func walkRowChildren(v Visitor, node *sx.Pair, alst *sx.Pair) *sx.Pair {
-	attrs, cells := GetRow(node)
-	newCells := walkChildrenList(v, cells, alst)
-	return MakeRow(attrs, newCells)
-}
-
-func walkCellChildren(v Visitor, cn *sx.Pair, alst *sx.Pair) *sx.Pair {
-	attrs, inlines := GetCell(cn)
-	newInlines := walkChildrenList(v, inlines, alst)
-	return MakeCell(attrs, newInlines)
-}
 
 func walkBLOBChildren(v Visitor, bn *sx.Pair, alst *sx.Pair) *sx.Pair {
 	attrs, syntax, content, inlines := GetBLOBuncode(bn)
@@ -347,38 +302,8 @@ func walkBLOBChildrenIt(v VisitorIt, bn *sx.Pair, alst *sx.Pair) {
 	WalkItList(v, inlines, 0, alst)
 }
 
-func walkMarkChildren(v Visitor, mn *sx.Pair, alst *sx.Pair) *sx.Pair {
-	attrs, mark, inlines := GetMark(mn)
-	newInlines := walkChildrenList(v, inlines, alst)
-	return MakeMark(attrs, mark, newInlines)
-}
-
 func walkEmbedChildren(v Visitor, en *sx.Pair, alst *sx.Pair) *sx.Pair {
 	attrs, ref, syntax, inlines := GetEmbed(en)
 	newInlines := walkChildrenList(v, inlines, alst)
 	return MakeEmbed(attrs, ref, syntax, newInlines)
-}
-
-func walkChildrenInlines3(v Visitor, node *sx.Pair, alst *sx.Pair) *sx.Pair {
-	sym, next := node.Car(), node.Tail()
-	attrs := next.Car()
-	next = next.Tail()
-	val3 := next.Car()
-	elems := next.Tail()
-	newElems := walkChildrenList(v, elems, alst)
-	var lb sx.ListBuilder
-	lb.AddN(sym, attrs, val3)
-	lb.ExtendBang(newElems)
-	return lb.List()
-}
-
-func walkChildrenInlines2(v Visitor, node *sx.Pair, alst *sx.Pair) *sx.Pair {
-	sym, next := node.Car(), node.Tail()
-	attrs := next.Car()
-	elems := next.Tail()
-	newElems := walkChildrenList(v, elems, alst)
-	var lb sx.ListBuilder
-	lb.AddN(sym, attrs)
-	lb.ExtendBang(newElems)
-	return lb.List()
 }
