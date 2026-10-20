@@ -17,7 +17,7 @@ command search path.
 Then, run the following Go command to retrieve a specific version of
 this library:
 
-    GOVCS=t73f.de:fossil go get t73f.de/r/zero@HASH
+    GOVCS=t73f.de:fossil go get t73f.de/r/zsx@HASH
 
 Here, `HASH` represents the commit hash of the version you want to use.
 
