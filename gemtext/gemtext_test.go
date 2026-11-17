@@ -30,15 +30,23 @@ func TestParseText(t *testing.T) {
 		want string
 	}{
 		{"empty", "", `(BLOCK)`},
-		{"only blank lines", "\n\n", `(BLOCK (PARA (HARD)))`},
+		{"one blank line", "\n", `(BLOCK)`},
+		{"line of blanks", " \t", `(BLOCK)`},
+		{"two blank lines", "\n\n", `(BLOCK (PARA (HARD)))`},
 		{"one line", "a", `(BLOCK (PARA (TEXT "a")))`},
-		{"lines are separate by hard break", "a\nb\n", `(BLOCK (PARA (TEXT "a") (HARD) (TEXT "b")))`},
+		{"lines are separated by hard break", "a\nb\n", `(BLOCK (PARA (TEXT "a") (HARD) (TEXT "b")))`},
 		{"CRLF", "a\r\nb\r\n", `(BLOCK (PARA (TEXT "a") (HARD) (TEXT "b")))`},
 		{"blank line between", "a\n\nb", `(BLOCK (PARA (TEXT "a") (HARD) (HARD) (TEXT "b")))`},
+		{"line of blanks between", "a\n \t\nb", `(BLOCK (PARA (TEXT "a") (HARD) (HARD) (TEXT "b")))`},
+		{"leading blank lines", "\n\na", `(BLOCK (PARA (HARD) (HARD) (TEXT "a")))`},
+		{"trailing blank line", "a\n\n", `(BLOCK (PARA (TEXT "a") (HARD)))`},
+		{"final line end is no blank line", "a\n", `(BLOCK (PARA (TEXT "a")))`},
 		{"leading white space is kept", "  a", `(BLOCK (PARA (TEXT "  a")))`},
 		{"trailing white space is kept", "a \t", `(BLOCK (PARA (TEXT "a \t")))`},
 		{"lone CR is text", "a\rb", `(BLOCK (PARA (TEXT "a\rb")))`},
-	}
+		{"BOM is ignored", "\xEF\xBB\xBFa", `(BLOCK (PARA (TEXT "a")))`},
+		{"BOM before heading", "\xEF\xBB\xBF# h", `(BLOCK (HEADING () 1 (TEXT "h")))`},
+		{"BOM only at start", "a\n\xEF\xBB\xBFb", `(BLOCK (PARA (TEXT "a") (HARD) (TEXT "\uFEFFb")))`}}
 	runTable(t, testcases)
 }
 
@@ -57,6 +65,11 @@ func TestParseHeading(t *testing.T) {
 		{"level 4 is level 3 plus #x", "####x", `(BLOCK (HEADING () 3 (TEXT "#x")))`},
 		{"leading blank means text", " # a", `(BLOCK (PARA (TEXT " # a")))`},
 		{"heading closes list", "* a\n# h", `(BLOCK (UNORDERED () (ITEM () (PARA (TEXT "a")))) (HEADING () 1 (TEXT "h")))`},
+		{"only hashes", "####", `(BLOCK (HEADING () 3 (TEXT "#")))`},
+		{"heading closes paragraph", "a\n# h", `(BLOCK (PARA (TEXT "a")) (HEADING () 1 (TEXT "h")))`},
+		{"blank line before heading", "a\n\n# h", `(BLOCK (PARA (TEXT "a") (HARD)) (HEADING () 1 (TEXT "h")))`},
+		{"one blank line between headings", "# h\n\n# i", `(BLOCK (HEADING () 1 (TEXT "h")) (HEADING () 1 (TEXT "i")))`},
+		{"two blank lines between headings", "# h\n\n\n# i", `(BLOCK (HEADING () 1 (TEXT "h")) (PARA (HARD)) (HEADING () 1 (TEXT "i")))`},
 	}
 	runTable(t, testcases)
 }
@@ -78,6 +91,10 @@ func TestParseList(t *testing.T) {
 		{"blank line splits list", "* a\n\n* b",
 			`(BLOCK (UNORDERED () (ITEM () (PARA (TEXT "a")))) (UNORDERED () (ITEM () (PARA (TEXT "b")))))`},
 		{"text after item is kept", "*  a", `(BLOCK (UNORDERED () (ITEM () (PARA (TEXT " a")))))`},
+		{"line of blanks splits list", "* a\n \t\n* b",
+			`(BLOCK (UNORDERED () (ITEM () (PARA (TEXT "a")))) (UNORDERED () (ITEM () (PARA (TEXT "b")))))`},
+		{"two blank lines after list", "* a\n\n\nt",
+			`(BLOCK (UNORDERED () (ITEM () (PARA (TEXT "a")))) (PARA (HARD) (HARD) (TEXT "t")))`},
 	}
 	runTable(t, testcases)
 }
@@ -100,6 +117,9 @@ func TestParseQuote(t *testing.T) {
 			`(BLOCK (UNORDERED () (ITEM () (PARA (TEXT "a")))) (REGION-QUOTE () ((PARA (TEXT "q")))))`},
 		{"list closes quote", ">q\n* a",
 			`(BLOCK (REGION-QUOTE () ((PARA (TEXT "q")))) (UNORDERED () (ITEM () (PARA (TEXT "a")))))`},
+		{"blank line splits quote", ">a\n\n>b",
+			`(BLOCK (REGION-QUOTE () ((PARA (TEXT "a")))) (REGION-QUOTE () ((PARA (TEXT "b")))))`},
+		{"quote text is trimmed left", ">  \ta", `(BLOCK (REGION-QUOTE () ((PARA (TEXT "a")))))`},
 	}
 	runTable(t, testcases)
 }
@@ -126,6 +146,12 @@ func TestParseLink(t *testing.T) {
 		{"leading blank means text", " => x", `(BLOCK (PARA (TEXT " => x")))`},
 		{"link closes quote", ">q\n=> u",
 			`(BLOCK (REGION-QUOTE () ((PARA (TEXT "q")))) (PARA (LINK () (EXTERNAL "u"))))`},
+		{"links form one paragraph", "=> a\n=> b",
+			`(BLOCK (PARA (LINK () (EXTERNAL "a")) (HARD) (LINK () (EXTERNAL "b"))))`},
+		{"text and link form one paragraph", "t\n=> u\nx",
+			`(BLOCK (PARA (TEXT "t") (HARD) (LINK () (EXTERNAL "u")) (HARD) (TEXT "x")))`},
+		{"heading closes link paragraph", "=> u\n# h",
+			`(BLOCK (PARA (LINK () (EXTERNAL "u"))) (HEADING () 1 (TEXT "h")))`},
 	}
 	runTable(t, testcases)
 }
@@ -151,6 +177,9 @@ func TestParsePreformatted(t *testing.T) {
 		{"closes list", "* a\n```\n```", block(
 			sx.MakeList(sx.MakeSymbol("UNORDERED"), sx.Nil(), sx.MakeList(sx.MakeSymbol("ITEM"), sx.Nil(), para("a"))),
 			verbatim("", ""))},
+		{"closes paragraph", "a\n```\nb\n```", block(para("a"), verbatim("", "b"))},
+		{"blank lines are kept", "```\n \t\n\n```", block(verbatim("", " \t\n"))},
+		{"closes list", "* a\n```\n```", block(unordered(item(para("a"))), verbatim("", ""))},
 	}
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -203,4 +232,12 @@ func verbatim(alt, content string) sx.Object {
 		attrs = sx.MakeList(sx.Cons(sx.MakeString("alt"), sx.MakeString(alt)))
 	}
 	return zsx.MakeVerbatim(zsx.SymVerbatimCode, attrs, content)
+}
+
+func unordered(items ...sx.Object) sx.Object {
+	return zsx.MakeList(zsx.SymListUnordered, nil, sx.MakeList(items...))
+}
+
+func item(blocks ...sx.Object) sx.Object {
+	return zsx.MakeListItem(nil, sx.MakeList(blocks...))
 }

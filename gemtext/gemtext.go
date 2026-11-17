@@ -15,37 +15,37 @@
 // encoding.
 //
 // The parser follows the Gemtext specification, version 0.24.0
-// (gemini://geminiprotocol.net/docs/gemtext-specification.gmi). It works in a
-// single pass over its input: every line is handled in isolation, depending
+// (gemini://geminiprotocol.net/docs/gemtext-specification.gmi). It works in
+// a single pass over its input: every line is handled in isolation, depending
 // only on its first characters and on a single mode bit (normal or
 // pre-formatted).
 //
 // # Usage
 //
-// Parse takes the document as a byte slice and returns an Sz block,
-// (BLOCK BlockElement ...). The result does not reference the input slice, so
-// the caller may reuse or modify it afterwards. Parsing cannot fail: every
-// input is a valid Gemtext document.
+// Parse takes the document as a byte slice and returns an Sz block, (BLOCK
+// BlockElement ...). The result does not reference the input slice, so the
+// caller may reuse or modify it afterwards. Parsing cannot fail: every input
+// is a valid Gemtext document.
 //
 // # Mapping to Sz
 //
-//	Gemtext                     Sz
-//	text line                   (TEXT text), part of a PARA
-//	blank line                  (nothing), part of a PARA
-//	=> url [text]               (LINK () (EXTERNAL url) [(TEXT text)]), part of a PARA
-//	# / ## / ### text           (HEADING () level [(TEXT text)])
-//	* text (consecutive)        (UNORDERED () (ITEM () [(PARA (TEXT text))]) ...)
-//	> text (consecutive)        (REGION-QUOTE () ((PARA (TEXT text) (HARD) ...)))
-//	```alt ... ```              (VERBATIM-CODE (("alt" . alt)) content)
+//	Gemtext                 Sz
+//	text line               (TEXT text), part of a PARA
+//	blank line              (nothing), part of a PARA
+//	=> url [text]           (LINK () (EXTERNAL url) [(TEXT text)]), part of a PARA
+//	# / ## / ### text       (HEADING () level [(TEXT text)])
+//	* text (consecutive)    (UNORDERED () (ITEM () [(PARA (TEXT text))]) ...)
+//	> text (consecutive)    (REGION-QUOTE () ((PARA (TEXT text) (HARD) ...)))
+//	```alt ... ```          (VERBATIM-CODE (("alt" . alt)) content)
 //
 // Gemtext has no paragraphs: every line is a stand-alone entity, and every
 // blank line is vertical blank space. Therefore, consecutive text lines, link
 // lines and blank lines are collected into one PARA, and the lines are
 // separated by (HARD). Lines are never merged. A blank line contributes no
 // element of its own, so a blank line between two text lines results in two
-// consecutive (HARD) elements. Separators stand between lines, not after
-// them: n lines result in n-1 (HARD) elements. A PARA ends with the first
-// line of another type.
+// consecutive (HARD) elements. Separators stand between lines, not after them:
+// n lines result in n-1 (HARD) elements. A PARA ends with the first line of
+// another type.
 //
 // Consecutive quote lines form one PARA inside one REGION-QUOTE, separated in
 // the same way; an empty quote line is a blank line of that PARA. Consecutive
@@ -62,11 +62,13 @@
 // URLs are not interpreted: they are always encoded as external references,
 // relative references are kept as written.
 //
-// More than three leading '#' characters are not a heading level above three:
-// the heading level is limited to three, the remaining characters are part of
-// the heading text. The text of a heading, of a quote line, and the alt text
+// Heading levels end at three: of more than three leading '#' characters, the
+// first three form the heading marker, the remaining ones are part of the
+// heading text. The text of a heading, of a quote line, and the alt text
 // are trimmed of surrounding white space; the text of text lines and list
-// items is kept as it is. Empty text creates no PARA.
+// items is kept as it is. A PARA that would contain no element (a single blank
+// line) is omitted. An empty list item is an ITEM without a PARA, and an empty
+// quote is a REGION-QUOTE without blocks.
 //
 // Lines inside a pre-formatted block are not interpreted and keep their white
 // space. They are joined by a single newline, without a trailing one. Text
@@ -75,7 +77,10 @@
 //
 // Lines end with LF or CRLF; a CR before the LF is removed. The input is
 // expected to be UTF-8, but this is not checked; invalid byte sequences are
-// copied to the resulting strings unchanged.
+// copied to the resulting strings unchanged. A leading UTF-8 byte order mark
+// is ignored. Lines end with LF or CRLF; a CR before the LF is removed. The
+// input is expected to be UTF-8, but this is not checked; invalid byte
+// sequences are copied to the resulting strings unchanged.
 package gemtext
 
 import (
@@ -104,17 +109,22 @@ const (
 type parser struct {
 	blocks sx.ListBuilder
 
-	grp   group          // currently open group of consecutive lines
-	items sx.ListBuilder // ITEMs of an open list, or PARAs of an open quote
+	// items collects the elements of the open group: the inline elements
+	// (including hard line breaks) of a paragraph or a quote, or the ITEMs of
+	// a list. It is empty if no group is open.
+	items sx.ListBuilder
 
+	grp     group  // currently open group of consecutive lines
 	inPre   bool   // parser is in "pre-formatted mode"
 	preAlt  string // alt text of the current pre-formatted block
 	preText []byte // content of the current pre-formatted block
 	preSeen bool   // at least one line was added to preText
 }
 
+var bom = []byte("\xEF\xBB\xBF")
+
 func (p *parser) parse(src []byte) *sx.Pair {
-	src = bytes.TrimPrefix(src, []byte("\xEF\xBB\xBF"))
+	src = bytes.TrimPrefix(src, bom)
 	for len(src) > 0 {
 		var line []byte
 		if i := bytes.IndexByte(src, '\n'); i >= 0 {
@@ -140,18 +150,18 @@ func (p *parser) line(line []byte) {
 		p.preLine(line)
 		return
 	}
-	if len(line) == 0 {
-		p.addLine(groupPara, makeText(line)) // blank line: no element
-		// p.closeGroup()
-		// p.emitPara(line)
+
+	// A line that consists only of space and tab characters is a blank line.
+	if len(bytes.Trim(line, blank)) == 0 {
+		p.addLine(groupPara, nil)
 		return
 	}
+
 	switch {
 	case line[0] == '`' && len(line) > 2 && line[1] == '`' && line[2] == '`':
 		p.closeGroup()
 		p.beginPre(line[3:])
 	case line[0] == '=' && len(line) > 1 && line[1] == '>':
-		//p.closeGroup()
 		p.link(line)
 	case line[0] == '*' && len(line) > 1 && line[1] == ' ':
 		p.listItem(line[2:])
@@ -161,9 +171,7 @@ func (p *parser) line(line []byte) {
 		p.closeGroup()
 		p.heading(line)
 	default:
-		p.addLine(groupPara, makeText(line)) // blank line: no element
-		// p.closeGroup()
-		// p.emitPara(line)
+		p.addLine(groupPara, makeText(line))
 	}
 }
 
@@ -206,6 +214,9 @@ func makeText(text []byte) *sx.Pair {
 	}
 	return zsx.MakeText(string(text))
 }
+
+// makeTextList returns a list with a single text element for text, or nil if
+// text is empty.
 func makeTextList(text []byte) *sx.Pair {
 	if len(text) > 0 {
 		return sx.Cons(zsx.MakeText(string(text)), nil)

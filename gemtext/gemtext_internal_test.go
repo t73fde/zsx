@@ -30,7 +30,7 @@ func TestHeadingLevel(t *testing.T) {
 		{"##a", 2},
 		{"### a", 3},
 		{"#### a", 3},
-		{"##### a", 3},
+		{"######## a", 3},
 		{"# #", 1},
 	}
 	for _, tc := range testcases {
